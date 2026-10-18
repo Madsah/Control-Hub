@@ -18,6 +18,7 @@ var T = (function () {
 		sound: { name: "Sound (pop-out)", icon: "mixer", popout: "sound" },
 		powerpanel: { name: "Power (pop-out)", icon: "power", popout: "power" },
 		soundsettings: { name: "Sound settings", icon: "speaker", uri: "ms-settings:sound", sends: "sound" },
+		flightline: { name: "FlightLine", icon: "plane", act: "openFlightLine" },
 		lock: { name: "Lock PC", icon: "lock" },
 		nightlight: { name: "Night light settings", icon: "moon", uri: "ms-settings:nightlight" },
 		display: { name: "Display settings", icon: "desktop", uri: "ms-settings:display" },
@@ -111,6 +112,7 @@ var T = (function () {
 				if (typeof Popout !== "undefined") Popout.open(q.popout);
 				return;
 			}
+			if (q.act) return Helper.online ? Helper.act({ action: q.act }) : U.toast("Start Control Hub for this button");
 			if (Helper.online) return Helper.act({ action: "quick", what: q.sends || cfg.what });
 			if (q.uri && Icue.openLink(q.uri)) return;
 			return U.toast("Start Control Hub for this button");

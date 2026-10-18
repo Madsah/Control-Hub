@@ -216,6 +216,61 @@ namespace ControlPanelHelper
                 SendJson(stream, 200, ok, allow);
                 return;
             }
+            // FlightLine: its window (served from the flightline folder) and its data.
+            if (req.Method == "GET" && (req.Path == "/flightline" || req.Path == "/flightline/"))
+            {
+                byte[] page;
+                string ptype;
+                if (FlightLineApp.File("index.html", out page, out ptype)) Send(stream, 200, ptype, page, allow, null);
+                else SendJson(stream, 404, Err("FlightLine isn't installed"), allow);
+                return;
+            }
+            if (req.Method == "GET" && req.Path.StartsWith("/flightline/"))
+            {
+                byte[] file;
+                string type;
+                if (FlightLineApp.File(req.Path.Substring(12), out file, out type)) Send(stream, 200, type, file, allow, null);
+                else SendJson(stream, 404, Err("not found"), allow);
+                return;
+            }
+            if (req.Path.StartsWith("/api/fl/"))
+            {
+                var fl = new Dictionary<string, object>();
+                if (req.Method == "GET" && req.Path == "/api/fl/logbook")
+                {
+                    fl["ok"] = true;
+                    fl["flights"] = FlightRec.Logbook();
+                    SendJson(stream, 200, fl, allow);
+                    return;
+                }
+                if (req.Method == "GET" && req.Path == "/api/fl/flight")
+                {
+                    string json = FlightRec.FlightJson(req.Param("id"));
+                    if (json == null) SendJson(stream, 404, Err("no such flight"), allow);
+                    else Send(stream, 200, "application/json; charset=utf-8", Encoding.UTF8.GetBytes(json), allow, null);
+                    return;
+                }
+                if (req.Method == "GET" && req.Path == "/api/fl/live")
+                {
+                    fl["ok"] = true;
+                    fl["sim"] = Sim.State();
+                    fl["rec"] = FlightRec.Live();
+                    SendJson(stream, 200, fl, allow);
+                    return;
+                }
+                if (req.Method == "POST" && req.Path == "/api/fl/delete")
+                {
+                    if (req.Header("X-Control-Panel") != "1") { SendJson(stream, 403, Err("missing header"), allow); return; }
+                    Dictionary<string, object> body = null;
+                    try { body = ParseJson(req.Body ?? "{}"); } catch { }
+                    fl["ok"] = body != null && FlightRec.Delete(Str(body, "id"));
+                    SendJson(stream, 200, fl, allow);
+                    return;
+                }
+                SendJson(stream, 404, Err("not found"), allow);
+                return;
+            }
+
             if (req.Method == "GET" && req.Path.StartsWith("/widget/"))
             {
                 byte[] file;
@@ -246,6 +301,7 @@ namespace ControlPanelHelper
                     bool ok;
                     if (what == "restore") ok = Hub.RequestRestore(Str(body, "name"));
                     else if (what == "forget") ok = Hub.Forget(Str(body, "service"));
+                    else if (what == "openFlightLine") ok = FlightLineApp.Open();
                     else if (what == "backupSettings")
                     {
                         object auto;
@@ -680,6 +736,7 @@ namespace ControlPanelHelper
                 case "power": return Power.Run(Str(b, "what"));
                 case "keepAwake": KeepAwake.Set(Bool(b, "value")); return true;
                 case "gameFocus": GameFocus.Set(Bool(b, "value")); return true;
+                case "openFlightLine": return FlightLineApp.Open();
                 case "speedTest": return SpeedTest.Start();
                 case "closeApp": return TopApps.Close(Str(b, "exe"), Bool(b, "force"));
                 case "brightness": return Brightness.Set(Int(b, "monitor"), Int(b, "value"));

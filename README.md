@@ -28,6 +28,7 @@ The first time it runs, the service closes the old Control Panel Helper, takes o
 | `service/` | Control Hub Service (C# 5, .NET Framework 4) |
 | `hub/` | The Control Hub app window (WinForms, drawn in Windows 11's own font and icons) |
 | `widget/` | The Control Panel iCUE widget (HTML/JS) |
+| `flightline/` | The FlightLine window (HTML/JS) |
 | `shared/` | The logo, and code used by both programs (backups) |
 | `docs/` | The Control Panel guide (every tile and feature) |
 | `version.json` | Version numbers and what's new. The Update button reads this. |
@@ -93,6 +94,14 @@ Logins are locked to your Windows user (DPAPI), so on their own they only work o
 - **Panel layout only:** the panel's own layout backups can be restored one by one, without touching anything else.
 
 The backup code is in `shared/src/BackupFile.cs` and is built into both programs.
+
+## FlightLine
+
+FlightLine is a flight logbook for MSFS 2024 that lives in Control Hub.
+
+- **Recording** is done by Control Hub Service (`service/src/FlightRec.cs`), in the background: a flight starts at pushback/taxi (or takeoff) and ends when you're parked. It keeps a point every few seconds, what happened when (engines, gear, flaps, lights, autopilot, takeoff, touchdown), the landing and the airports. One file per flight in `%APPDATA%\ControlHub\FlightLine\flights`, a list in `logbook.json`. A flight in progress is saved every minute, so it survives a crash.
+- **The window** is `flightline/` (HTML/JS), served by the service at `http://127.0.0.1:39812/flightline/` and opened in Edge's app mode (no address bar). `Control Hub.exe --flightline` opens it (the Start menu and desktop shortcuts use that).
+- Data: `/api/fl/logbook`, `/api/fl/flight?id=`, `/api/fl/live`, `/api/fl/delete`.
 
 ## Coming next
 

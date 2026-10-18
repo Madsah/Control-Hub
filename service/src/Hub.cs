@@ -188,6 +188,7 @@ namespace ControlPanelHelper
         public static void Seen(string userAgent)
         {
             if (userAgent != null && userAgent.StartsWith("ControlHub/")) return;
+            if (userAgent != null && userAgent.Contains(" Edg/")) return;   // the FlightLine window (Edge), not the panel
             Interlocked.Exchange(ref panelSeen, DateTime.UtcNow.Ticks);
         }
 
@@ -243,7 +244,7 @@ namespace ControlPanelHelper
         // The widget in iCUE is a small starter: it loads the panel's files from here when this copy is the same
         // or newer, so panel updates arrive with Control Hub's Update button instead of an iCUE re-import.
 
-        static readonly Dictionary<string, string> Types = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        internal static readonly Dictionary<string, string> Types = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { ".js", "application/javascript; charset=utf-8" }, { ".css", "text/css; charset=utf-8" },
             { ".html", "text/html; charset=utf-8" }, { ".json", "application/json; charset=utf-8" },

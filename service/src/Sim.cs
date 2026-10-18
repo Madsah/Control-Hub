@@ -61,10 +61,16 @@ namespace ControlPanelHelper
             new[] { "SIMULATION RATE", "number" }, new[] { "PLANE TOUCHDOWN NORMAL VELOCITY", "feet per second" },
             new[] { "PLANE TOUCHDOWN BANK DEGREES", "degrees" }, new[] { "PLANE TOUCHDOWN PITCH DEGREES", "degrees" },
             new[] { "G FORCE", "GForce" }, new[] { "CAMERA STATE", "enum" },
+            // For FlightLine's black box (FlightRec.cs).
+            new[] { "GEAR HANDLE POSITION", "bool" }, new[] { "FLAPS HANDLE INDEX", "number" },
+            new[] { "LIGHT LANDING", "bool" }, new[] { "LIGHT BEACON", "bool" }, new[] { "LIGHT STROBE", "bool" },
+            new[] { "LIGHT TAXI", "bool" }, new[] { "LIGHT NAV", "bool" }, new[] { "AUTOPILOT MASTER", "bool" },
+            new[] { "SPOILERS HANDLE POSITION", "percent" },
         };
         const int V_LAT = 0, V_LON = 1, V_ALT = 2, V_AGL = 3, V_IAS = 4, V_GS = 5, V_VS = 6, V_HDG = 7, V_TRK = 8, V_GROUND = 9,
             V_FUEL = 10, V_FF1 = 11, V_COMB1 = 15, V_COMB2 = 16, V_PARK = 17, V_COM1 = 18, V_COM1S = 19, V_COM2 = 20, V_XPDR = 21,
-            V_ZULU = 22, V_LOCAL = 23, V_RATE = 24, V_TD_VEL = 25, V_TD_BANK = 26, V_TD_PITCH = 27, V_G = 28, V_CAM = 29;
+            V_ZULU = 22, V_LOCAL = 23, V_RATE = 24, V_TD_VEL = 25, V_TD_BANK = 26, V_TD_PITCH = 27, V_G = 28, V_CAM = 29,
+            V_GEAR = 30, V_FLAPS = 31, V_L_LAND = 32, V_L_BEACON = 33, V_L_STROBE = 34, V_L_TAXI = 35, V_L_NAV = 36, V_AP = 37, V_SPOIL = 38;
 
         static readonly object Gate = new object();
         static readonly object Io = new object(); // SimConnect calls, one at a time
@@ -172,7 +178,7 @@ namespace ControlPanelHelper
                         {
                             nextCheck = DateTime.UtcNow.AddSeconds(10);
                             msfsRunning = IsMsfsRunning();
-                            if (!msfsRunning) status = "MSFS isn't running";
+                            if (!msfsRunning) { status = "MSFS isn't running"; SimClosed(); }
                             else if (!LoadDll()) status = "SimConnect.dll not found";
                             else Connect();
                         }
@@ -305,6 +311,52 @@ namespace ControlPanelHelper
         // Called with Gate held, about 3 times a second.
         static void Track()
         {
+            // Moved more than 20 nm at once: a new flight was started in the sim (or the plane was moved). The flight so far ends there.
+            if (blockOut > 0 && blockIn == 0 && prevLat != 0 && FlightRec.Nm(prevLat, prevLon, v[V_LAT], v[V_LON]) > 20)
+            {
+                FlightRec.Abort("A new flight was started in the sim");
+                ResetFlight();
+            }
+            prevLat = v[V_LAT]; prevLon = v[V_LON];
+            TrackFlight();
+            if (blockOut > 0 && blockIn == 0) FlightRec.Tick(Sample(), airborneThisFlight);
+        }
+
+        static double prevLat, prevLon;
+
+        static void ResetFlight()
+        {
+            blockOut = takeoffAt = landingAt = blockIn = 0;
+            airborneThisFlight = false;
+            wasOnGround = true;
+            landingPending = 0;
+        }
+
+        /// <summary>MSFS was closed in the middle of a flight: what was recorded is kept, and the next flight starts fresh.</summary>
+        static void SimClosed()
+        {
+            lock (Gate)
+            {
+                if (blockOut > 0 && blockIn == 0) FlightRec.Abort("MSFS was closed");
+                ResetFlight();
+                prevLat = prevLon = 0;
+            }
+        }
+
+        static FlightRec.Sample Sample()
+        {
+            var s = new FlightRec.Sample();
+            s.Lat = v[V_LAT]; s.Lon = v[V_LON]; s.Alt = v[V_ALT]; s.Agl = v[V_AGL]; s.Ias = v[V_IAS]; s.Gs = v[V_GS]; s.Vs = v[V_VS]; s.Hdg = v[V_TRK];
+            s.Fuel = v[V_FUEL]; s.Gear = v[V_GEAR]; s.Flaps = v[V_FLAPS]; s.Spoilers = v[V_SPOIL];
+            s.Ground = v[V_GROUND] > 0.5; s.Engines = v[V_COMB1] > 0.5 || v[V_COMB2] > 0.5; s.Park = v[V_PARK] > 0.5;
+            s.LightLanding = v[V_L_LAND] > 0.5; s.LightBeacon = v[V_L_BEACON] > 0.5; s.LightStrobe = v[V_L_STROBE] > 0.5;
+            s.LightTaxi = v[V_L_TAXI] > 0.5; s.LightNav = v[V_L_NAV] > 0.5; s.Autopilot = v[V_AP] > 0.5;
+            s.Aircraft = title;
+            return s;
+        }
+
+        static void TrackFlight()
+        {
             bool ground = v[V_GROUND] > 0.5;
             double gs = v[V_GS], vs = v[V_VS], agl = v[V_AGL];
             bool engines = v[V_COMB1] > 0.5 || v[V_COMB2] > 0.5;
@@ -317,6 +369,7 @@ namespace ControlPanelHelper
                 if (!wasOnGround && airborneThisFlight)
                 {
                     landingAt = Now();
+                    FlightRec.Touchdown(landingAt);
                     landingPending = 3;
                     tdLat = v[V_LAT]; tdLon = v[V_LON]; tdTrk = v[V_TRK]; tdIas = v[V_IAS];
                 }
@@ -324,11 +377,13 @@ namespace ControlPanelHelper
                 {
                     blockOut = Now();
                     fuelAtBlockOut = v[V_FUEL];
+                    FlightRec.Begin(blockOut, Sample(), PlanStr("from"), PlanStr("to"), PlanStr("flight"));
                 }
                 if (landingAt > 0 && blockIn == 0 && gs < 1 && (!engines || park) && (Now() - landingAt) > 20000)
                 {
                     blockIn = Now();
                     WriteLog();
+                    FlightRec.End(blockIn, v[V_FUEL]);
                 }
                 phase = !engines || (park && gs < 1) ? "parked" : gs > 40 ? (airborneThisFlight ? "landing" : "takeoff") : (airborneThisFlight ? "taxi-in" : "taxi-out");
                 if (blockIn > 0 && phase == "parked" && !engines) { /* stays parked until the next flight */ }
@@ -339,7 +394,13 @@ namespace ControlPanelHelper
                 {
                     takeoffAt = Now();
                     airborneThisFlight = true;
-                    if (blockOut == 0) { blockOut = takeoffAt; fuelAtBlockOut = v[V_FUEL]; }
+                    if (blockOut == 0)
+                    {
+                        blockOut = takeoffAt;
+                        fuelAtBlockOut = v[V_FUEL];
+                        FlightRec.Begin(blockOut, Sample(), PlanStr("from"), PlanStr("to"), PlanStr("flight"));
+                    }
+                    FlightRec.Takeoff(takeoffAt);
                 }
                 if (agl < 2500 && vs > 300) phase = "takeoff";
                 else if (vs > 400) phase = "climb";
@@ -362,6 +423,7 @@ namespace ControlPanelHelper
                 l["lat"] = tdLat; l["lon"] = tdLon; l["hdg"] = Math.Round(tdTrk); l["ias"] = Math.Round(tdIas);
                 l["grade"] = Grade(l);
                 lastLanding = l;
+                FlightRec.Landing(l);
                 Log.Write("Sim: landing " + Math.Round(fpm) + " fpm");
                 // Where on the runway you touched down (reads the runway list, so not on the sim thread).
                 double la = tdLat, lo = tdLon, hd = tdTrk;
@@ -373,6 +435,7 @@ namespace ControlPanelHelper
                     {
                         foreach (var kv in td) l[kv.Key] = kv.Value;
                         l["grade"] = Grade(l);
+                        FlightRec.Landing(l);
                     }
                     Log.Write("Sim: touchdown " + td["distM"] + " m down runway " + td["rwy"] + ", " + td["clM"] + " m from the centerline");
                 });
@@ -391,8 +454,9 @@ namespace ControlPanelHelper
                 }
             }
 
-            // A new flight starts when you're parked with engines off after a logged flight.
-            if (blockIn > 0 && !engines && ground && Now() - blockIn > 60000)
+            // A new flight starts when you're parked with engines off after a logged flight,
+            // or when you taxi off again without shutting down.
+            if (blockIn > 0 && ground && ((!engines && Now() - blockIn > 60000) || (gs > 5 && Now() - blockIn > 30000)))
             {
                 blockOut = takeoffAt = landingAt = blockIn = 0;
                 airborneThisFlight = false;
@@ -849,6 +913,33 @@ namespace ControlPanelHelper
                 catch (Exception ex) { Log.Write("Runways: " + ex.Message); }
             }
             return list;
+        }
+
+        /// <summary>The airport with a runway nearest to a spot (within maxMeters), e.g. where a flight started. Null if none.</summary>
+        public static string Nearest(double lat, double lon, double maxMeters)
+        {
+            try
+            {
+                lock (Gate) { if (!Ensure()) return null; }
+                string best = null;
+                double bestD = maxMeters;
+                double mPerLat = 111320, mPerLon = 111320 * Math.Cos(lat * Math.PI / 180);
+                foreach (var line in File.ReadLines(FilePath))
+                {
+                    var f = Freqs.SplitCsv(line);
+                    if (f.Count < 17 || f[7] == "1") continue;
+                    double la1 = D(f[9]), lo1 = D(f[10]), la2 = D(f[15]), lo2 = D(f[16]);
+                    if (double.IsNaN(la1) || double.IsNaN(lo1) || Math.Abs(la1 - lat) > 0.1 || Math.Abs(lo1 - lon) > 0.2) continue;
+                    if (double.IsNaN(la2) || double.IsNaN(lo2)) { la2 = la1; lo2 = lo1; }
+                    // Distance to the runway (as a line between its two ends).
+                    double bx = (lo2 - lo1) * mPerLon, by = (la2 - la1) * mPerLat, px = (lon - lo1) * mPerLon, py = (lat - la1) * mPerLat;
+                    double len2 = bx * bx + by * by, t = len2 > 0 ? Math.Max(0, Math.Min(1, (px * bx + py * by) / len2)) : 0;
+                    double dx = px - t * bx, dy = py - t * by, d = Math.Sqrt(dx * dx + dy * dy);
+                    if (d < bestD) { bestD = d; best = f[2].ToUpperInvariant(); }
+                }
+                return best;
+            }
+            catch (Exception ex) { Log.Write("Nearest airport: " + ex.Message); return null; }
         }
 
         /// <summary>Which runway you landed on, how far past the threshold and how far from the centerline (meters).</summary>

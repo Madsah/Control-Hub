@@ -65,6 +65,9 @@ copy /y "%BUILD%\Control Hub.exe" "%DEST%\" >nul
 if errorlevel 1 goto copyfailed
 copy /y "version.json" "%DEST%\" >nul
 copy /y "Restore previous version.bat" "%DEST%\" >nul
+rem FlightLine: its window (served by Control Hub Service) and its icon.
+robocopy "flightline" "%DEST%\flightline" /MIR /NFL /NDL /NJH /NJS /NP >nul
+copy /y "shared\FlightLine.ico" "%DEST%\" >nul
 if not exist "%DEST%\projects.json" copy /y "projects.json" "%DEST%\" >nul
 if not exist "%DEST%\update.json" copy /y "update.json" "%DEST%\" >nul
 rem The repository was renamed from control-hub to Control-Hub.
@@ -74,6 +77,7 @@ echo.
 echo [4/6] Start menu shortcut and starting Control Hub Service...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Programs') + '\Control Hub.lnk'); $s.TargetPath=$env:DEST + '\Control Hub.exe'; $s.WorkingDirectory=$env:DEST; $s.Description='Control Hub'; $s.Save()" >nul 2>nul
 if errorlevel 1 echo Couldn't make the Start menu shortcut. You can still open Control Hub from the tray icon.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Programs') + '\FlightLine.lnk'); $s.TargetPath=$env:DEST + '\Control Hub.exe'; $s.Arguments='--flightline'; $s.WorkingDirectory=$env:DEST; $s.IconLocation=$env:DEST + '\FlightLine.ico,0'; $s.Description='FlightLine: your flight logbook'; $s.Save()" >nul 2>nul
 start "" /D "%DEST%" "%DEST%\Control Hub Service.exe"
 
 echo.

@@ -16,7 +16,7 @@ namespace ControlHub
 {
     static class HubApp
     {
-        public const string Version = "1.4.0";
+        public const string Version = "1.5.0";
         public const string Name = "Control Hub";
         public const string ServiceExe = "Control Hub Service.exe";
         public const string ServiceProcess = "Control Hub Service";
@@ -37,6 +37,13 @@ namespace ControlHub
             if (args != null && args.Length >= 2 && args[0] == "--update")
             {
                 RunUpdateWindow(args[1], args.Length > 2 ? args[2] : "");
+                return;
+            }
+            // "Control Hub.exe --flightline" (the FlightLine shortcuts): opens FlightLine and nothing else.
+            if (args != null && args.Length >= 1 && args[0] == "--flightline")
+            {
+                if (!OpenFlightLine())
+                    MessageBox.Show("FlightLine couldn't open, because Control Hub Service didn't start.\n\nOpen Control Hub and look at the Overview.", "FlightLine", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             bool createdNew;
@@ -93,6 +100,53 @@ namespace ControlHub
                 Application.Run(new UpdateWindow(string.IsNullOrEmpty(version) ? "the newest version" : version));
             }
             catch (Exception ex) { Report(ex, true); }
+        }
+
+        // ------------------------------------------------------------------ FlightLine
+
+        /// <summary>Opens the FlightLine window (Control Hub Service serves it and opens it). Starts the service first if needed.</summary>
+        public static bool OpenFlightLine()
+        {
+            if (HubApi.Get("/api/hub/status", 1500) == null)
+            {
+                if (!ServiceRunning()) StartService();
+                for (int i = 0; i < 30 && HubApi.Get("/api/hub/status", 1000) == null; i++) Thread.Sleep(500);
+            }
+            return HubApi.Run("openFlightLine");
+        }
+
+        public static string FlightLineLink
+        {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "FlightLine.lnk"); }
+        }
+
+        /// <summary>The FlightLine shortcut on the desktop: opens FlightLine through Control Hub, with FlightLine's own icon.</summary>
+        public static bool SetFlightLineShortcut(bool on)
+        {
+            try
+            {
+                if (!on)
+                {
+                    if (File.Exists(FlightLineLink)) File.Delete(FlightLineLink);
+                    return true;
+                }
+                Type t = Type.GetTypeFromProgID("WScript.Shell");
+                dynamic shell = Activator.CreateInstance(t);
+                dynamic lnk = shell.CreateShortcut(FlightLineLink);
+                lnk.TargetPath = Path.Combine(Folder, "Control Hub.exe");
+                lnk.Arguments = "--flightline";
+                lnk.WorkingDirectory = Folder;
+                string ico = Path.Combine(Folder, "FlightLine.ico");
+                if (File.Exists(ico)) lnk.IconLocation = ico + ",0";
+                lnk.Description = "FlightLine: your flight logbook";
+                lnk.Save();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Step("FlightLine shortcut: " + ex.Message);
+                return false;
+            }
         }
 
         // ------------------------------------------------------------------ startup log and error reports

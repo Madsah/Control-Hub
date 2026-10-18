@@ -1,12 +1,13 @@
 {
-  "version": "1.4.0",
-  "service": "3.3.1",
-  "hub": "1.4.0",
-  "widget": "5.2.1",
+  "version": "1.5.0",
+  "service": "3.4.0",
+  "hub": "1.5.0",
+  "widget": "5.2.2",
   "date": "2026-10-18",
   "notes": [
-    "Updates now show in Control Hub's own update window with steps and a progress bar, instead of a black command window (from the next update on).",
-    "If an update fails, the window says what went wrong in plain words and has a Copy details button.",
-    "From 1.3: Sound and Power pop-outs, icon-only buttons, the game keeps the focus when you touch the panel, and the panel reloads itself after updates."
+    "New: FlightLine, your flight logbook. Every MSFS flight is recorded by itself: route, path on a map, altitude, what happened when, and the landing.",
+    "Open it from Control Hub → Projects, the Start menu, or a desktop shortcut (Projects → Desktop shortcut).",
+    "Your flights from the old flight log are added to the logbook.",
+    "Panel: a FlightLine quick action for any button."
   ]
 }

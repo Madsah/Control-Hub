@@ -223,6 +223,34 @@ namespace ControlHub
         /// <summary>Other projects from projects.json (one short entry each).</summary>
         void AddProjectRows(Stack s, bool full)
         {
+            // FlightLine: part of Control Hub (its flights are recorded by Control Hub Service).
+            var fl = s.Put(new Row(Glyph.Airplane, "FlightLine", "Your flight logbook: every MSFS flight is recorded by itself"));
+            fl.Add(Btn("Open", true, delegate
+            {
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    if (!HubApp.OpenFlightLine())
+                        try { BeginInvoke((MethodInvoker)delegate { Dlg.Info(this, "FlightLine couldn't open", "Control Hub Service isn't answering. Restart it on the Overview, then try again."); }); } catch { }
+                });
+            }));
+            if (full)
+            {
+                FlatButton sc = null;
+                sc = Btn(File.Exists(HubApp.FlightLineLink) ? "Remove desktop shortcut" : "Desktop shortcut", false, delegate
+                {
+                    bool on = !File.Exists(HubApp.FlightLineLink);
+                    if (!HubApp.SetFlightLineShortcut(on)) { Dlg.Info(this, "Couldn't change the shortcut", "See Help for the details."); return; }
+                    sc.Text = File.Exists(HubApp.FlightLineLink) ? "Remove desktop shortcut" : "Desktop shortcut";
+                    fl.PerformLayout();
+                });
+                fl.Add(sc);
+                fl.Add(Btn("Flights folder", false, delegate
+                {
+                    string d = Path.Combine(BackupFile.DataFolder, "FlightLine");
+                    Directory.CreateDirectory(d);
+                    HubApp.Open(d);
+                }));
+            }
             string file = Path.Combine(HubApp.Folder, "projects.json");
             var list = new List<Dictionary<string, object>>();
             try { if (File.Exists(file)) list = HubApi.List(HubApi.Parse(File.ReadAllText(file, Encoding.UTF8)), "projects"); } catch { }
