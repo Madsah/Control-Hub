@@ -63,6 +63,8 @@ copy /y "version.json" "%DEST%\" >nul
 copy /y "Restore previous version.bat" "%DEST%\" >nul
 if not exist "%DEST%\projects.json" copy /y "projects.json" "%DEST%\" >nul
 if not exist "%DEST%\update.json" copy /y "update.json" "%DEST%\" >nul
+rem The repository was renamed from control-hub to Control-Hub.
+findstr /c:"\"control-hub\"" "%DEST%\update.json" >nul 2>nul && copy /y "update.json" "%DEST%\" >nul
 
 echo.
 echo [4/6] Start menu shortcut and starting Control Hub Service...

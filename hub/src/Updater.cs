@@ -25,7 +25,7 @@ namespace ControlHub
         }
 
         /// <summary>Where updates come from: update.json in the program folder (owner/repo/branch), else the defaults.</summary>
-        public static string Owner = "Madsah", Repo = "control-hub", Branch = "main";
+        public static string Owner = "Madsah", Repo = "Control-Hub", Branch = "main";
 
         static readonly string WorkRoot = Path.Combine(Path.GetTempPath(), "ControlHubUpdate");
 
