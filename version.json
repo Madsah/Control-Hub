@@ -1,12 +1,12 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "service": "3.4.0",
-  "hub": "1.5.1",
+  "hub": "1.5.2",
   "widget": "5.2.2",
   "date": "2026-10-18",
   "notes": [
-    "The update window no longer gets stuck on Finishing (the update itself was done).",
-    "The update window can be closed while it works; the update finishes by itself.",
+    "Check for updates sees a new version right away (it could be up to 5 minutes late).",
+    "The update window no longer gets stuck on Finishing, and can be closed while it works.",
     "From 1.5.0: FlightLine, your flight logbook. Every MSFS flight is recorded by itself."
   ]
 }

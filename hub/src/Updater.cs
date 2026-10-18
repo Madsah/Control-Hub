@@ -83,9 +83,23 @@ namespace ControlHub
             var info = new Info();
             try
             {
-                string url = "https://raw.githubusercontent.com/" + Owner + "/" + Repo + "/" + Branch + "/version.json?t=" + DateTime.UtcNow.Ticks;
-                string text;
-                using (var w = Client()) text = w.DownloadString(url);
+                // GitHub's API answers with the newest version.json right away; raw.githubusercontent.com can be up to
+                // 5 minutes behind after a push. The API allows 60 checks an hour without signing in, so raw is the fallback.
+                string text = null;
+                try
+                {
+                    using (var w = Client())
+                    {
+                        w.Headers[HttpRequestHeader.Accept] = "application/vnd.github.raw+json";
+                        text = w.DownloadString("https://api.github.com/repos/" + Owner + "/" + Repo + "/contents/version.json?ref=" + Branch);
+                    }
+                }
+                catch (WebException) { text = null; }
+                if (string.IsNullOrEmpty(text) || text.TrimStart()[0] != '{' || text.Contains("\"content\":"))
+                {
+                    string url = "https://raw.githubusercontent.com/" + Owner + "/" + Repo + "/" + Branch + "/version.json?t=" + DateTime.UtcNow.Ticks;
+                    using (var w = Client()) text = w.DownloadString(url);
+                }
                 var d = HubApi.Parse(text);
                 info.Version = HubApi.Str(d, "version");
                 info.Notes = HubApi.Strings(d, "notes");
