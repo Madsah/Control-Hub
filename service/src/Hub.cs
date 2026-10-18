@@ -167,7 +167,7 @@ namespace ControlPanelHelper
                     Settings.Current.TwitchAccess = null; Settings.Current.TwitchRefresh = null; Settings.Current.TwitchExpires = 0;
                     break;
                 case "discord":
-                    Discord.Forget();
+                    DiscordLink.Forget();
                     break;
                 case "steam":
                     Settings.Current.SteamKey = null;
@@ -257,8 +257,8 @@ namespace ControlPanelHelper
 
             var c = new Dictionary<string, object>();
             c["spotify"] = Conn(Spotify.Connected, Spotify.Configured, Spotify.Connected ? "Connected" : Spotify.Configured ? "Not logged in" : "Not set up");
-            bool dc = Discord.Configured && !string.IsNullOrEmpty(Settings.Current.DiscordRefresh);
-            c["discord"] = Conn(dc, Discord.Configured, dc ? "Connected" : Discord.Configured ? "Not logged in" : "Not set up");
+            bool dc = DiscordLink.Configured && !string.IsNullOrEmpty(Settings.Current.DiscordRefresh);
+            c["discord"] = Conn(dc, DiscordLink.Configured, dc ? "Connected" : DiscordLink.Configured ? "Not logged in" : "Not set up");
             c["twitch"] = Conn(Twitch.Connected, Twitch.Configured, Twitch.Connected ? "Connected" : Twitch.Configured ? "Not logged in" : "Not set up");
             bool steam = !string.IsNullOrEmpty(Settings.Current.SteamKey);
             c["steam"] = Conn(steam, steam, steam ? "Key added" : "No key (only needed for friends online)");
