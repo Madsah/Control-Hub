@@ -68,7 +68,7 @@ echo.
 echo [4/6] Start menu shortcut and starting Control Hub Service...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Programs') + '\Control Hub.lnk'); $s.TargetPath=$env:DEST + '\Control Hub.exe'; $s.WorkingDirectory=$env:DEST; $s.Description='Control Hub'; $s.Save()" >nul 2>nul
 if errorlevel 1 echo Couldn't make the Start menu shortcut. You can still open Control Hub from the tray icon.
-start "" "%DEST%\Control Hub Service.exe"
+start "" /D "%DEST%" "%DEST%\Control Hub Service.exe"
 
 echo.
 echo [5/6] The panel...
@@ -97,7 +97,7 @@ if not defined ANYPROJ echo Nothing extra to install.
 
 echo.
 if /i "%MODE%"=="/update" (echo Control Hub is updated.) else (echo Done! Control Hub Service is running in the tray, by the clock.)
-start "" "%DEST%\Control Hub.exe"
+start "" /D "%DEST%" "%DEST%\Control Hub.exe"
 rmdir /s /q "%BUILD%" >nul 2>nul
 echo.
 if /i "%MODE%"=="/update" (
@@ -123,7 +123,7 @@ set "PKG="
 for /f "delims=" %%F in ('powershell -NoProfile -Command "Get-ChildItem -Recurse -Filter *.icuewidget | Sort-Object LastWriteTime | Select-Object -Last 1 -ExpandProperty FullName"') do set "PKG=%%F"
 if not defined PKG goto widgetfailed
 echo Opening the new widget in iCUE. Click there to update it.
-start "" "%PKG%"
+start "" /D "%DEST%" "%PKG%"
 set "WIDGETOK=1"
 exit /b 0
 :widgetfailed

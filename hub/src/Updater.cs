@@ -27,7 +27,7 @@ namespace ControlHub
         /// <summary>Where updates come from: update.json in the program folder (owner/repo/branch), else the defaults.</summary>
         public static string Owner = "Madsah", Repo = "control-hub", Branch = "main";
 
-        static readonly string Work = Path.Combine(Path.GetTempPath(), "ControlHubUpdate");
+        static readonly string WorkRoot = Path.Combine(Path.GetTempPath(), "ControlHubUpdate");
 
         static Updater()
         {
@@ -122,7 +122,9 @@ namespace ControlHub
             error = null;
             try
             {
-                if (Directory.Exists(Work)) Directory.Delete(Work, true);
+                // Each update gets its own folder: an older one may still be in use (a program started from it).
+                CleanOld();
+                string Work = Path.Combine(WorkRoot, DateTime.Now.ToString("yyyyMMdd-HHmmss"));
                 Directory.CreateDirectory(Work);
                 string zip = Path.Combine(Work, "update.zip");
                 string url = "https://codeload.github.com/" + Owner + "/" + Repo + "/zip/refs/heads/" + Branch;
@@ -142,6 +144,20 @@ namespace ControlHub
             catch (WebException ex) { error = ex.Response == null ? "Couldn't reach GitHub. Is the PC online?" : "GitHub answered: " + ex.Message; }
             catch (Exception ex) { error = ex.Message; }
             return null;
+        }
+
+        /// <summary>Removes earlier update folders (and the old single folder); ones still in use are left for next time.</summary>
+        static void CleanOld()
+        {
+            try
+            {
+                if (!Directory.Exists(WorkRoot)) return;
+                foreach (var d in Directory.GetDirectories(WorkRoot))
+                    try { Directory.Delete(d, true); } catch { }
+                foreach (var f in Directory.GetFiles(WorkRoot))
+                    try { File.Delete(f); } catch { }
+            }
+            catch { }
         }
 
         /// <summary>Starts the new version's installer in update mode. Control Hub closes right after.</summary>

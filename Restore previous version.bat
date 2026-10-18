@@ -19,8 +19,8 @@ if errorlevel 1 goto failed
 copy /y "previous\Control Hub.exe" "%~dp0" >nul
 if errorlevel 1 goto failed
 if exist "previous\version.json" copy /y "previous\version.json" "%~dp0" >nul
-start "" "%~dp0Control Hub Service.exe"
-start "" "%~dp0Control Hub.exe"
+start "" /D "%~dp0." "%~dp0Control Hub Service.exe"
+start "" /D "%~dp0." "%~dp0Control Hub.exe"
 echo Done: the previous version is back.
 timeout /t 6 >nul
 exit /b 0
