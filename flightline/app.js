@@ -432,6 +432,16 @@ async function poll() {
 	}
 }
 
+/* FlightLine's window opened small (like a phone): make it a proper size, in the middle of the screen. */
+(function fitWindow() {
+	try {
+		if (window.outerWidth >= 1000 && window.outerHeight >= 640) return;
+		const w = Math.min(1480, screen.availWidth - 80), h = Math.min(940, screen.availHeight - 60);
+		window.resizeTo(w, h);
+		window.moveTo((screen.availLeft || 0) + Math.round((screen.availWidth - w) / 2), (screen.availTop || 0) + Math.round((screen.availHeight - h) / 2));
+	} catch (e) {}
+})();
+
 (async function start() {
 	await loadLogbook();
 	await poll();

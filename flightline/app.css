@@ -230,8 +230,15 @@ td .muted, .muted { color: var(--mute); }
 	.grid2, .stats-grid { grid-template-columns: 1fr; }
 	td.ac { max-width: 160px; }
 }
+/* A narrow window: the menu shows only its icons. */
+@media (max-width: 900px) {
+	.side { flex-basis: 64px; padding: 14px 8px; }
+	.brand b, .nav span, .soon, .sim span { display: none; }
+	.brand { padding: 0 4px 14px; }
+	.nav { justify-content: center; padding: 10px 0; }
+	.sim { justify-content: center; padding: 10px 0; }
+}
 @media (max-width: 760px) {
-	.side { display: none; }
 	main { padding: 18px 16px 30px; }
 	.live .vals { display: none; }
 }

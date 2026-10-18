@@ -549,7 +549,11 @@ namespace ControlPanelHelper
                 string edge = EdgePath();
                 if (edge != null)
                 {
-                    Process.Start(new ProcessStartInfo(edge, "--app=" + url + " --window-size=1440,900") { UseShellExecute = false });
+                    // A proper window size, in the middle of the main screen (Edge remembers it after you change it yourself).
+                    var wa = Screen.PrimaryScreen.WorkingArea;
+                    int w = Math.Min(1480, wa.Width - 80), h = Math.Min(940, wa.Height - 60);
+                    int x = wa.Left + (wa.Width - w) / 2, y = wa.Top + (wa.Height - h) / 2;
+                    Process.Start(new ProcessStartInfo(edge, "--app=" + url + " --window-size=" + w + "," + h + " --window-position=" + x + "," + y) { UseShellExecute = false });
                     return true;
                 }
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
