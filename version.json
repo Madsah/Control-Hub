@@ -1,14 +1,15 @@
 {
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"service": "3.2.0",
-	"hub": "1.2.0",
+	"hub": "1.2.1",
 	"widget": "5.1.1",
 	"date": "2026-10-18",
 	"notes": [
+		"If Control Hub can't start, it now says why on screen (and saves it in hub.log), instead of not opening at all.",
+		"Updates no longer get stuck on \"the file is being used by another process\".",
 		"New look for Control Hub: Overview with cockpit-style status lights, and Windows 11's own font and icons.",
 		"New Backup page: back up everything to one file, optionally with your logins (protected by a password).",
 		"Automatic backup every week (newest 5 kept), to OneDrive if you use it.",
-		"Restore a whole backup, or just an earlier panel layout.",
-		"The test message \"Panel loaded from Control Hub\" is gone."
+		"Restore a whole backup, or just an earlier panel layout."
 	]
 }

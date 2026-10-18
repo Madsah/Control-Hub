@@ -114,20 +114,22 @@ namespace ControlHub
             Controls.Add(content);
             Controls.Add(nav);
 
-            pages["Overview"] = BuildOverview();
-            pages["Projects"] = BuildProjects();
-            pages["Connections"] = BuildConnections();
-            pages["Panel"] = BuildPanel();
-            pages["Updates"] = BuildUpdates();
-            pages["Backup"] = BuildBackup();
-            pages["Help"] = BuildHelp();
+            HubApp.Step("Menu built");
+            pages["Overview"] = BuildOverview(); HubApp.Step("Overview built");
+            pages["Projects"] = BuildProjects(); HubApp.Step("Projects built");
+            pages["Connections"] = BuildConnections(); HubApp.Step("Connections built");
+            pages["Panel"] = BuildPanel(); HubApp.Step("Panel built");
+            pages["Updates"] = BuildUpdates(); HubApp.Step("Updates built");
+            pages["Backup"] = BuildBackup(); HubApp.Step("Backup built");
+            pages["Help"] = BuildHelp(); HubApp.Step("Help built");
             foreach (var p in pages.Values) { p.Dock = DockStyle.Fill; p.Visible = false; content.Controls.Add(p); }
             ShowPage("Overview");
+            HubApp.Step("Pages shown");
 
             timer = new System.Windows.Forms.Timer { Interval = 3000 };
             timer.Tick += delegate { Poll(); };
             timer.Start();
-            Shown += delegate { help.Top = nav.ClientSize.Height - help.Height - T.Px(12); Poll(); CheckUpdates(true); LoadLayouts(); };
+            Shown += delegate { HubApp.Started = true; HubApp.Step("Window open"); help.Top = nav.ClientSize.Height - help.Height - T.Px(12); Poll(); CheckUpdates(true); LoadLayouts(); };
             Activated += delegate { Poll(); };
         }
 

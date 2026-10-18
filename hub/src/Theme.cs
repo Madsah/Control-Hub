@@ -270,7 +270,7 @@ namespace ControlHub
         protected override void OnLayout(LayoutEventArgs e)
         {
             base.OnLayout(e);
-            if (Lamps.Count == 0) return;
+            if (Lamps.Count == 0 || Width < T.Px(100) || Height < T.Px(20)) return;   // not sized yet
             int pad = T.Px(7), gap = T.Px(6);
             float w = (Width - 2 * pad - gap * (Lamps.Count - 1)) / (float)Lamps.Count;
             for (int i = 0; i < Lamps.Count; i++)
@@ -356,8 +356,9 @@ namespace ControlHub
         {
             base.OnLayout(e);
             var pref = Side.PreferredSize;
-            Side.Bounds = new Rectangle(Width - pref.Width - T.Px(16), (baseHeight - pref.Height) / 2, pref.Width, pref.Height);
-            if (Body != null) Body.Bounds = new Rectangle(TextLeft, baseHeight, Width - TextLeft - T.Px(18), Height - baseHeight - T.Px(12));
+            var want = new Rectangle(Math.Max(0, Width - pref.Width - T.Px(16)), Math.Max(0, (baseHeight - pref.Height) / 2), pref.Width, pref.Height);
+            if (Side.Bounds != want) Side.Bounds = want;
+            if (Body != null) Body.Bounds = new Rectangle(TextLeft, baseHeight, Math.Max(1, Width - TextLeft - T.Px(18)), Math.Max(1, Height - baseHeight - T.Px(12)));
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -447,6 +448,7 @@ namespace ControlHub
         {
             int y = Padding.Top + AutoScrollPosition.Y;
             int w = ClientSize.Width - Padding.Horizontal;
+            if (w < T.Px(40)) { base.OnLayout(e); return; }   // not sized yet
             foreach (Control c in Controls)
             {
                 if (!c.Visible) continue;
