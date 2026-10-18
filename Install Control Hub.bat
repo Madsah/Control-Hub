@@ -32,12 +32,12 @@ echo.
 echo [1/6] Building Control Hub Service...
 if exist "%BUILD%" rmdir /s /q "%BUILD%"
 mkdir "%BUILD%"
-"%CSC%" /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ /out:"%BUILD%\Control Hub Service.exe" /win32icon:shared\ControlHub.ico /win32manifest:service\app.manifest /resource:shared\ControlHub.ico,ControlHub.ico %REFS% service\src\*.cs
+"%CSC%" /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ /out:"%BUILD%\Control Hub Service.exe" /win32icon:shared\ControlHub.ico /win32manifest:service\app.manifest /resource:shared\ControlHub.ico,ControlHub.ico %REFS% service\src\*.cs shared\src\*.cs
 if errorlevel 1 goto failed
 
 echo.
 echo [2/6] Building Control Hub...
-"%CSC%" /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ /out:"%BUILD%\Control Hub.exe" /win32icon:shared\ControlHub.ico /win32manifest:hub\app.manifest /resource:shared\ControlHub.ico,ControlHub.ico %REFS% hub\src\*.cs
+"%CSC%" /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ /out:"%BUILD%\Control Hub.exe" /win32icon:shared\ControlHub.ico /win32manifest:hub\app.manifest /resource:shared\ControlHub.ico,ControlHub.ico %REFS% hub\src\*.cs shared\src\*.cs
 if errorlevel 1 goto failed
 
 echo.

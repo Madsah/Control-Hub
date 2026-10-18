@@ -1,12 +1,14 @@
 {
-	"version": "1.1.0",
-	"service": "3.1.0",
-	"hub": "1.1.0",
-	"widget": "5.1.0",
+	"version": "1.2.0",
+	"service": "3.2.0",
+	"hub": "1.2.0",
+	"widget": "5.1.1",
 	"date": "2026-10-18",
 	"notes": [
-		"Test of the new panel starter: the panel loads its code from Control Hub, so panel updates come with the Update button. Accept the widget in iCUE one last time.",
-		"When it works, the panel says \"Panel loaded from Control Hub\" for a moment, and Control Hub → Projects shows it too.",
-		"If Control Hub isn't running, the panel uses its own built-in copy as before."
+		"New look for Control Hub: Overview with cockpit-style status lights, and Windows 11's own font and icons.",
+		"New Backup page: back up everything to one file, optionally with your logins (protected by a password).",
+		"Automatic backup every week (newest 5 kept), to OneDrive if you use it.",
+		"Restore a whole backup, or just an earlier panel layout.",
+		"The test message \"Panel loaded from Control Hub\" is gone."
 	]
 }

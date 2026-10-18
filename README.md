@@ -26,9 +26,9 @@ The first time it runs, the service closes the old Control Panel Helper, takes o
 | Folder | What |
 |---|---|
 | `service/` | Control Hub Service (C# 5, .NET Framework 4) |
-| `hub/` | The Control Hub app window (WinForms) |
+| `hub/` | The Control Hub app window (WinForms, drawn in Windows 11's own font and icons) |
 | `widget/` | The Control Panel iCUE widget (HTML/JS) |
-| `shared/` | The logo |
+| `shared/` | The logo, and code used by both programs (backups) |
 | `docs/` | The Control Panel guide (every tile and feature) |
 | `version.json` | Version numbers and what's new. The Update button reads this. |
 | `update.json` | Where updates come from (owner, repo, branch) |
@@ -79,6 +79,21 @@ The widget in iCUE is only a small **starter** (`widget/index.html`, `widget/man
 - **A starter change** (iCUE settings in `index.html`, permissions in `manifest.json`, or `boot.js`): the installer notices that those files changed and opens the widget in iCUE once, so you can accept it. Raise `manifest.json`'s version as well.
 - **New script or style files:** add them to the lists in `widget/files.js`.
 
+## Backup
+
+**Control Hub → Backup** makes **one .zip file** with everything:
+
+- the settings folder (`%APPDATA%\ControlHub`): settings, the panel layout and its own backups, button pictures, flight tracks and SimConnect.dll,
+- `projects.json` and `update.json`.
+
+Logins are locked to your Windows user (DPAPI), so on their own they only work on the same PC. **With logins…** also stores them in the file, encrypted with a password you choose (AES-256, key from PBKDF2). That way they survive a reinstall of Windows or a new PC.
+
+- **Automatic backups:** Control Hub Service makes one every week and keeps the newest 5. By default they go to OneDrive (if you use it), otherwise Documents. You can change the folder.
+- **Restore:** pick a backup file. Control Hub keeps the current settings folder next to it (`ControlHub before restore …`), puts the backup in place, restarts the service, and the panel picks up the restored layout.
+- **Panel layout only:** the panel's own layout backups can be restored one by one, without touching anything else.
+
+The backup code is in `shared/src/BackupFile.cs` and is built into both programs.
+
 ## Coming next
 
-- A new look for the Control Hub window.
+- Updates by themselves: the service checks for new versions and says so by the clock.

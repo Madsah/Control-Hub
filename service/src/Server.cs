@@ -238,6 +238,12 @@ namespace ControlPanelHelper
                     bool ok;
                     if (what == "restore") ok = Hub.RequestRestore(Str(body, "name"));
                     else if (what == "forget") ok = Hub.Forget(Str(body, "service"));
+                    else if (what == "backupSettings")
+                    {
+                        object auto;
+                        AutoBackup.Set(!body.TryGetValue("auto", out auto) || !(auto is bool) || (bool)auto, Str(body, "folder"));
+                        ok = true;
+                    }
                     else ok = Hub.Run(what);
                     res["ok"] = ok;
                     SendJson(stream, ok ? 200 : 400, res, allow);

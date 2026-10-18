@@ -341,6 +341,7 @@ namespace ControlPanelHelper
             try { cs2 = Cs2.State3(); } catch { cs2 = "?"; }
             c["cs2"] = Conn(cs2 == "installed", cs2 != "nocs2", cs2 == "installed" ? "Set up" : cs2 == "nocs2" ? "CS2 not found" : "Not set up");
             d["connections"] = c;
+            d["backup"] = AutoBackup.Status();
             return d;
         }
 

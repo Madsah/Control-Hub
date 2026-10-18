@@ -38,6 +38,9 @@ namespace ControlPanelHelper
         public long TwitchExpires { get; set; }
         public string TwitchUserId { get; set; }
         public string Cs2Token { get; set; }
+        public string BackupFolder { get; set; }    // where automatic backups go (null = OneDrive or Documents)
+        public bool AutoBackupOff { get; set; }
+        public long LastAutoBackup { get; set; }    // UTC ticks
 
         public SettingsData()
         {
