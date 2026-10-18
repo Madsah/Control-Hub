@@ -101,6 +101,8 @@ FlightLine is a flight logbook for MSFS 2024 that lives in Control Hub.
 
 - **Recording** is done by Control Hub Service (`service/src/FlightRec.cs`), in the background: a flight starts at pushback/taxi (or takeoff) and ends when you're parked. It keeps a point every few seconds, what happened when (engines, gear, flaps, lights, autopilot, takeoff, touchdown), the landing and the airports. One file per flight in `%APPDATA%\ControlHub\FlightLine\flights`, a list in `logbook.json`. A flight in progress is saved every minute, so it survives a crash.
 - **The window** is `flightline/` (HTML/JS), served by the service at `http://127.0.0.1:39812/flightline/` and opened in Edge's app mode (no address bar). `Control Hub.exe --flightline` opens it (the Start menu and desktop shortcuts use that).
+- **Find a flight** uses real airline routes from [Virtual Radar Server's standing data](https://github.com/vradarserver/standing-data) (CC0), downloaded once a month by the service (`service/src/RouteData.cs`) into `FlightLine\routes.idx`.
+- **Session** (`service/src/FlightSession.cs`): starts your flight programs in order and switches the panel page.
 - Data: `/api/fl/logbook`, `/api/fl/flight?id=`, `/api/fl/live`, `/api/fl/delete`.
 
 ## Coming next

@@ -1,13 +1,13 @@
 {
-  "version": "1.6.0",
-  "service": "3.5.0",
+  "version": "1.7.0",
+  "service": "3.6.0",
   "hub": "1.6.0",
   "widget": "5.2.3",
   "date": "2026-10-18",
   "notes": [
-    "FlightLine: Start session. One button starts your flight programs one after another (MSFS 2024, SayIntentions, Navigraph, SimBrief…) and switches the panel to your flight page.",
-    "End session switches the panel back, and closes only the programs you ticked.",
-    "Edit the list in FlightLine → Session. Start it from FlightLine, Control Hub → Projects, or a panel button (Quick actions).",
-    "Finding the airports for a flight is quicker and lighter."
+    "FlightLine: Find a flight. Real airline routes (flights that have actually been flown) that fit your plane and how long you want to fly.",
+    "From your last landing, where you are in MSFS, or any airport. Only new airports if you like, or Surprise me.",
+    "Send to SimBrief opens SimBrief with departure, destination, aircraft and flight number filled in.",
+    "The first time, Control Hub downloads the route list (a minute or two); after that it's refreshed once a month."
   ]
 }

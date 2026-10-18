@@ -269,6 +269,34 @@ namespace ControlPanelHelper
                     SendJson(stream, 200, fl, allow);
                     return;
                 }
+                if (req.Method == "GET" && req.Path == "/api/fl/find")
+                {
+                    int mn, mx, kt, ovh, rwy, cnt;
+                    int.TryParse(req.Param("min") ?? "45", out mn);
+                    int.TryParse(req.Param("max") ?? "120", out mx);
+                    int.TryParse(req.Param("kt") ?? "450", out kt);
+                    int.TryParse(req.Param("ovh") ?? "25", out ovh);
+                    int.TryParse(req.Param("rwy") ?? "0", out rwy);
+                    if (!int.TryParse(req.Param("count") ?? "12", out cnt)) cnt = 12;
+                    string from = RouteData.ResolveFrom(req.Param("from"));
+                    var found = RouteData.Find(from, mn, mx, kt, ovh, rwy, req.Param("new") == "1", req.Param("surprise") == "1", cnt);
+                    found["resolvedFrom"] = from;
+                    SendJson(stream, 200, found, allow);
+                    return;
+                }
+                if (req.Method == "GET" && req.Path == "/api/fl/routes")
+                {
+                    RouteData.Refresh(req.Param("refresh") == "1");
+                    fl["ok"] = true;
+                    fl["have"] = RouteData.HaveIndex;
+                    fl["building"] = RouteData.Building;
+                    fl["error"] = RouteData.LastError;
+                    if (RouteData.HaveIndex) fl["date"] = RouteData.IndexDate.ToString("yyyy-MM-dd");
+                    fl["here"] = RouteData.ResolveFrom("here");
+                    fl["last"] = RouteData.ResolveFrom("last");
+                    SendJson(stream, 200, fl, allow);
+                    return;
+                }
                 if (req.Method == "GET" && req.Path == "/api/fl/steam")
                 {
                     fl["ok"] = true;

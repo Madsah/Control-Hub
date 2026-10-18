@@ -85,6 +85,7 @@ function render() {
 	if (view === "stats") return renderStats();
 	if (view === "live") return renderLive();
 	if (view === "session") return Session.render(main);
+	if (view === "finder") return Finder.render(main);
 	if (view === "flight") return renderFlight(openId);
 	renderLogbook();
 }
@@ -292,7 +293,7 @@ async function renderFlight(id) {
 	let h = '<button class="back" id="back">' + BACK + " Logbook</button>";
 	h += '<div class="head"><div class="grow"><div class="route-big">' + esc(fa) + '<span class="arr">→</span>' + esc(ta) +
 		(f.complete === false ? '<span class="tag warn">Unfinished</span>' : "") + "</div><p>" + esc(day(f.start)) + " · " + clock(f.start) + "–" + clock(f.end) + " · " + esc(acName(f.aircraft)) +
-		(f.planTo && f.planTo !== ta ? " · planned to " + esc(f.planTo) : "") + '</p></div><button class="btn danger" id="del">' + TRASH + " Delete</button></div>";
+		(f.planTo && f.planTo !== ta ? " · planned to " + esc(f.planTo) : "") + '</p></div>' + (ta.length === 4 ? '<button class="btn" id="again">Find a flight from ' + esc(ta) + "</button>" : "") + '<button class="btn danger" id="del">' + TRASH + " Delete</button></div>";
 	h += '<div class="grid2"><div><div class="map" id="map"></div><div class="panel chart"><h3>Altitude</h3><div id="alt"></div></div></div><div>';
 	h += '<div class="panel side-panel"><h3>Landing</h3>';
 	if (li.fpm != null) {
@@ -319,6 +320,11 @@ async function renderFlight(id) {
 	h += "</div></div>";
 	main.innerHTML = h;
 	$("#back").addEventListener("click", () => go("logbook"));
+	const again = $("#again");
+	if (again) again.addEventListener("click", () => {
+		try { const o = JSON.parse(localStorage.getItem("flFinder") || "{}"); o.from = "code"; o.fromCode = ta; localStorage.setItem("flFinder", JSON.stringify(o)); } catch (e) {}
+		go("finder");
+	});
 	$("#del").addEventListener("click", async () => {
 		if (!(await confirmBox("Delete this flight?", fa + " → " + ta + ", " + day(f.start) + ". It's removed from the logbook and can't be brought back (except from a Control Hub backup).", "Delete"))) return;
 		const r = await fetch("/api/fl/delete", { method: "POST", headers: { "Content-Type": "application/json", "X-Control-Panel": "1" }, body: JSON.stringify({ id: f.id }) }).then(r => r.json()).catch(() => null);

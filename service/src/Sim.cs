@@ -918,9 +918,35 @@ namespace ControlPanelHelper
         // Runway ends (airport, lat1, lon1, lat2, lon2), read from runways.csv once and kept, for Nearest.
         static List<string> endsApt;
         static List<double[]> endsPos;
+        static Dictionary<string, double> endsLen;   // longest runway per airport, feet
         static DateTime endsAt = DateTime.MinValue;
         // Let go of the list 5 minutes after the last lookup (a few MB that are only needed around a flight's start and end).
-        static readonly Timer endsDrop = new Timer(delegate { lock (Gate) { endsApt = null; endsPos = null; } }, null, Timeout.Infinite, Timeout.Infinite);
+        static readonly Timer endsDrop = new Timer(delegate { lock (Gate) { endsApt = null; endsPos = null; endsLen = null; } }, null, Timeout.Infinite, Timeout.Infinite);
+
+        /// <summary>The longest runway of each airport (feet), or null if the runway list isn't there.</summary>
+        public static Dictionary<string, double> MaxLengths()
+        {
+            lock (Gate)
+            {
+                LoadEnds();
+                endsDrop.Change(300000, Timeout.Infinite);
+                return endsLen;
+            }
+        }
+
+        /// <summary>Where an airport is (its first runway end), or null.</summary>
+        public static double[] Position(string icao)
+        {
+            if (string.IsNullOrEmpty(icao)) return null;
+            lock (Gate)
+            {
+                LoadEnds();
+                endsDrop.Change(300000, Timeout.Infinite);
+                if (endsApt == null) return null;
+                int i = endsApt.IndexOf(icao.ToUpperInvariant());
+                return i < 0 ? null : new[] { endsPos[i][0], endsPos[i][1] };
+            }
+        }
 
         static void LoadEnds()
         {
@@ -928,6 +954,7 @@ namespace ControlPanelHelper
             if (!Ensure()) return;
             var apts = new List<string>(50000);
             var pos = new List<double[]>(50000);
+            var len = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             foreach (var line in File.ReadLines(FilePath))
             {
                 var f = Freqs.SplitCsv(line);
@@ -935,11 +962,15 @@ namespace ControlPanelHelper
                 double la1 = D(f[9]), lo1 = D(f[10]), la2 = D(f[15]), lo2 = D(f[16]);
                 if (double.IsNaN(la1) || double.IsNaN(lo1)) continue;
                 if (double.IsNaN(la2) || double.IsNaN(lo2)) { la2 = la1; lo2 = lo1; }
-                apts.Add(f[2].ToUpperInvariant());
+                string code = f[2].ToUpperInvariant();
+                apts.Add(code);
                 pos.Add(new[] { la1, lo1, la2, lo2 });
+                double ft = D(f[3]), had;
+                if (!double.IsNaN(ft) && (!len.TryGetValue(code, out had) || ft > had)) len[code] = ft;
             }
             endsApt = apts;
             endsPos = pos;
+            endsLen = len;
             endsAt = File.GetLastWriteTimeUtc(FilePath);
         }
 
