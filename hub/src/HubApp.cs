@@ -249,6 +249,13 @@ namespace ControlHub
         // Projects page
         StatusLabel cpService, cpPanel;
         Label cpVersions;
+        // Updates
+        StatusLabel updStatus;
+        Label updNotes;
+        Button updNow, updCheck, updBack;
+        Updater.Info updInfo;
+        bool updBusy;
+        DateTime updChecked = DateTime.MinValue;
         Button cpStart;
         FlowLayoutPanel projectList;
         // Connections page
@@ -323,7 +330,7 @@ namespace ControlHub
             timer = new System.Windows.Forms.Timer { Interval = 3000 };
             timer.Tick += delegate { Poll(); };
             timer.Start();
-            Shown += delegate { FitCards(); Poll(); LoadBackups(); };
+            Shown += delegate { FitCards(); Poll(); LoadBackups(); CheckUpdates(true); };
             Activated += delegate { Poll(); };
             ResumeLayout(false);
             PerformLayout();
@@ -432,12 +439,26 @@ namespace ControlHub
                 if (string.IsNullOrEmpty(f)) f = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ControlHub");
                 HubApp.Open(f);
             };
-            var update = Ui.Btn("Check for updates", false);
-            update.Enabled = false;
-            update.ForeColor = Ui.Dim;
-            row.Controls.Add(cpStart); row.Controls.Add(restart); row.Controls.Add(folder); row.Controls.Add(data); row.Controls.Add(update);
+            row.Controls.Add(cpStart); row.Controls.Add(restart); row.Controls.Add(folder); row.Controls.Add(data);
             card.Controls.Add(row);
-            card.Controls.Add(Ui.Lbl("Updates with one click are coming in the next step.", Ui.Small, Ui.Dim));
+
+            // Updates (first on the page).
+            var upd = Ui.MakeCard(CardWidth);
+            upd.Controls.Add(Ui.Lbl("Updates", Ui.Title, Ui.Fore));
+            upd.Controls.Add(Ui.Lbl("New versions come from GitHub (" + Updater.Owner + "/" + Updater.Repo + "). Control Hub, the service and the panel are all updated together.", Ui.Body, Ui.Dim));
+            updStatus = new StatusLabel(); upd.Controls.Add(updStatus);
+            updNotes = Ui.Lbl("", Ui.Body, Ui.Fore); updNotes.Visible = false; upd.Controls.Add(updNotes);
+            var uRow = Ui.Row();
+            updNow = Ui.Btn("Update now", true);
+            updNow.Visible = false;
+            updNow.Click += delegate { DoUpdate(); };
+            updCheck = Ui.Btn("Check for updates", false);
+            updCheck.Click += delegate { CheckUpdates(false); };
+            updBack = Ui.Btn("Go back to the previous version", false);
+            updBack.Click += delegate { GoBack(); };
+            uRow.Controls.Add(updNow); uRow.Controls.Add(updCheck); uRow.Controls.Add(updBack);
+            upd.Controls.Add(uRow);
+            page.Controls.Add(upd);
             page.Controls.Add(card);
 
             projectList = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, BackColor = Ui.Back, Margin = new Padding(0) };
@@ -507,6 +528,113 @@ namespace ControlHub
                     foreach (var x in ps) x.Dispose();
                     st.Set(on ? "Running" : "Not running", on ? Ui.Good : Ui.Dim);
                 }
+        }
+
+        // ================================================================== Updates
+
+        void CheckUpdates(bool quiet)
+        {
+            if (updBusy) return;
+            updBusy = true;
+            updChecked = DateTime.Now;
+            updCheck.Enabled = false;
+            if (!quiet || updInfo == null) updStatus.Set("Checking GitHub for a new version…", Ui.Dim);
+            ShowGoBack();
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                var info = Updater.Check();
+                if (IsDisposed) return;
+                try { BeginInvoke((MethodInvoker)delegate { updBusy = false; updCheck.Enabled = true; ShowUpdate(info); }); }
+                catch { }
+            });
+        }
+
+        void ShowUpdate(Updater.Info info)
+        {
+            updInfo = info;
+            string mine = Updater.Installed();
+            if (info.Error != null)
+            {
+                updStatus.Set("Couldn't check for updates: " + info.Error, Ui.Warn);
+                updNow.Visible = false;
+                updNotes.Visible = false;
+                return;
+            }
+            if (info.Newer)
+            {
+                updStatus.Set("Version " + info.Version + " is ready (you have " + mine + ")", Ui.Accent);
+                var sb = new StringBuilder("What's new:");
+                foreach (var n in info.Notes) sb.Append("\n•  ").Append(n);
+                updNotes.Text = sb.ToString();
+                updNotes.Visible = info.Notes.Count > 0;
+                updNow.Text = "Update to " + info.Version;
+                updNow.Visible = true;
+            }
+            else
+            {
+                updStatus.Set("You have the newest version (" + mine + ")", Ui.Good);
+                updNow.Visible = false;
+                updNotes.Visible = false;
+            }
+            FitCards();
+        }
+
+        void ShowGoBack()
+        {
+            bool can = Updater.CanGoBack();
+            string prev = Updater.PreviousVersion();
+            updBack.Visible = can;
+            if (can) updBack.Text = "Go back to the previous version" + (string.IsNullOrEmpty(prev) ? "" : " (" + prev + ")");
+        }
+
+        void DoUpdate()
+        {
+            if (updInfo == null || !updInfo.Newer || updBusy) return;
+            if (MessageBox.Show(this,
+                "Update to version " + updInfo.Version + "?\n\n" +
+                "Control Hub closes, and a window builds and installs the new version (about a minute). " +
+                "If anything fails there, nothing is changed.\n\n" +
+                "At the end iCUE may ask you to accept the updated panel widget.",
+                HubApp.Name, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            updBusy = true;
+            updNow.Enabled = false;
+            updCheck.Enabled = false;
+            updStatus.Set("Downloading the new version…", Ui.Accent);
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                string error;
+                string folder = Updater.Download(delegate (string msg)
+                {
+                    try { BeginInvoke((MethodInvoker)delegate { updStatus.Set(msg, Ui.Accent); }); } catch { }
+                }, out error);
+                if (IsDisposed) return;
+                try
+                {
+                    BeginInvoke((MethodInvoker)delegate
+                    {
+                        updBusy = false;
+                        updNow.Enabled = true;
+                        updCheck.Enabled = true;
+                        if (folder == null) { updStatus.Set("The update couldn't be downloaded: " + error, Ui.Bad); return; }
+                        if (!Updater.RunInstaller(folder)) { updStatus.Set("Couldn't start the installer.", Ui.Bad); return; }
+                        // The installer closes Control Hub anyway; closing now lets it replace this program.
+                        Application.Exit();
+                    });
+                }
+                catch { }
+            });
+        }
+
+        void GoBack()
+        {
+            string prev = Updater.PreviousVersion();
+            if (MessageBox.Show(this,
+                "Go back to the previous version" + (string.IsNullOrEmpty(prev) ? "" : " (" + prev + ")") + "?\n\n" +
+                "Control Hub and the service are put back as they were before the last update. " +
+                "Your settings, logins and panel layout are not touched.",
+                HubApp.Name, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            if (Updater.GoBack()) Application.Exit();
+            else MessageBox.Show(this, "Couldn't start going back. Run \"Restore previous version.bat\" in the program folder.", HubApp.Name);
         }
 
         // ================================================================== Connections
@@ -758,6 +886,7 @@ namespace ControlHub
         void Poll()
         {
             if (polling || !Visible || WindowState == FormWindowState.Minimized) return;
+            if ((DateTime.Now - updChecked).TotalMinutes > 60) CheckUpdates(true);
             polling = true;
             ThreadPool.QueueUserWorkItem(delegate
             {

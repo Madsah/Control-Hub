@@ -30,8 +30,11 @@ The first time it runs, the service closes the old Control Panel Helper, takes o
 | `widget/` | The Control Panel iCUE widget (HTML/JS) |
 | `shared/` | The logo |
 | `docs/` | The Control Panel guide (every tile and feature) |
-| `version.json` | Version numbers and what's new. The Update button will read this. |
+| `version.json` | Version numbers and what's new. The Update button reads this. |
+| `update.json` | Where updates come from (owner, repo, branch) |
+| `projects/` | Projects installed together with Control Hub |
 | `projects.json` | Extra projects shown in Control Hub → Projects |
+| `Restore previous version.bat` | Puts the last version back |
 
 ## Adding a project to Control Hub
 
@@ -54,9 +57,20 @@ Add an entry to `projects.json` in the install folder:
 
 Every field except `name` is optional. `process` is the program name (without `.exe`) used to show Running / Not running.
 
+## Updates
+
+After the first install, you never unzip again. In **Control Hub → Projects → Updates**:
+
+1. Control Hub checks `version.json` here on GitHub. It checks by itself when you open it, and every hour while it's open.
+2. If there's a newer version, it shows **What's new** and an **Update** button.
+3. **Update** downloads the newest version and starts *its* `Install Control Hub.bat` with `/update`. Because the new installer always does the installing, an update can change anything: new parts, new projects, the widget, and the updater itself.
+4. The installer builds to the side first. If that fails, nothing changes. Otherwise it keeps the installed version in `previous\` and swaps in the new one.
+5. **Go back to the previous version** (or `Restore previous version.bat` in the program folder) puts the last version back. It only restores the programs; settings and layout are never touched.
+
+To publish a new version, change the code, raise `version` in `version.json`, add a few `notes`, and push to `main`. `update.json` in the program folder says where updates come from (owner, repo, branch).
+
+Projects can be installed through the same updates: see `projects/README.md`.
+
 ## Coming next
 
-- An **Update** button in Control Hub: it checks `version.json` here, downloads the new version, builds it to the side, keeps a backup of the old one, and swaps it in.
 - Testing whether the widget can load its code from Control Hub Service, so panel updates need no click in iCUE.
-
-*Work in progress.*
