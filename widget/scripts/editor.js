@@ -910,7 +910,27 @@ var Editor = (function () {
 		wrap.innerHTML = '<div class="tabs"><button data-tab="apps" class="on">Apps</button><button data-tab="web">Websites</button><button data-tab="quick">Quick actions</button></div><div class="tab-body"></div>';
 		var tb = wrap.querySelector(".tab-body");
 		openModal("Choose what this button opens", wrap, back);
+		// The name under the icon: automatic (left out when it doesn't fit), always or never.
+		var nameBar = el("div", "pick-name");
+		wrap.insertBefore(nameBar, tb);
+		function drawName() {
+			var cur = (t.cfg && t.cfg.label) || "auto";
+			nameBar.innerHTML = "<span>Name under the icon</span>";
+			[["auto", "Automatic"], ["show", "Always"], ["hide", "Icon only"]].forEach(function (o) {
+				var c = el("button", "chip" + (cur === o[0] ? " on" : ""), esc(o[1]));
+				c.addEventListener("click", function () {
+					t.cfg = t.cfg || {};
+					if (o[0] === "auto") delete t.cfg.label; else t.cfg.label = o[0];
+					save();
+					render();
+					drawName();
+				});
+				nameBar.appendChild(c);
+			});
+		}
+		drawName();
 		function choose(cfg) {
+			if (t.cfg && t.cfg.label) cfg.label = t.cfg.label;
 			t.cfg = cfg;
 			done(t, back);
 		}
@@ -975,7 +995,8 @@ var Editor = (function () {
 			var list = el("div", "pick-grid");
 			tb.innerHTML = "";
 			Object.keys(T.QUICK).forEach(function (k) {
-				list.appendChild(itemBtn({ kind: "quick", what: k, name: T.QUICK[k].name }, T.QUICK[k].uri ? "" : "needs Control Hub"));
+				var q = T.QUICK[k];
+				list.appendChild(itemBtn({ kind: "quick", what: k, name: q.popout ? q.name.replace(" (pop-out)", "") : q.name }, q.popout ? "Opens a panel over the page" : q.uri ? "" : "needs Control Hub"));
 			});
 			tb.appendChild(list);
 		}

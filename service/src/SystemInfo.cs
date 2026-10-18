@@ -149,6 +149,7 @@ namespace ControlPanelHelper
                         return true;
                     case "restart": return Shutdown("/r /t 0");
                     case "shutdown": return Shutdown("/s /t 0");
+                    case "signout": return Shutdown("/l");
                     default: return false;
                 }
             }

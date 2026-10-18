@@ -1,15 +1,13 @@
 {
-	"version": "1.2.2",
-	"service": "3.2.0",
-	"hub": "1.2.2",
-	"widget": "5.1.1",
-	"date": "2026-10-18",
-	"notes": [
-		"Fixes Control Hub crashing when it opens (1.2.0 and 1.2.1).",
-		"Updates no longer get stuck on \"the file is being used by another process\".",
-		"New look for Control Hub: Overview with cockpit-style status lights, and Windows 11's own font and icons.",
-		"New Backup page: back up everything to one file, optionally with your logins (protected by a password).",
-		"Automatic backup every week (newest 5 kept), to OneDrive if you use it.",
-		"Restore a whole backup, or just an earlier panel layout."
-	]
+  "version": "1.3.0",
+  "service": "3.3.0",
+  "hub": "1.2.2",
+  "widget": "5.2.0",
+  "date": "2026-10-18",
+  "notes": [
+    "Sound pop-out: one button opens every app's volume, the output and the microphone over the panel.",
+    "Power pop-out: lock, sleep, sign out, restart and shut down (hold to be sure). A small Power tile shows just its icon.",
+    "Buttons show only the icon when the name doesn't fit (or choose Always / Icon only).",
+    "Touching the panel no longer takes the game's focus: Control Hub gives it straight back (Look → Games)."
+  ]
 }

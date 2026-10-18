@@ -654,6 +654,7 @@ namespace ControlPanelHelper
 
         static bool Act(Dictionary<string, object> b)
         {
+            GameFocus.Acting(Str(b, "action"));
             switch (Str(b, "action"))
             {
                 case "speakersVolume": Audio.SetVolume(false, Str(b, "device"), Int(b, "value")); return true;
@@ -670,6 +671,7 @@ namespace ControlPanelHelper
                 case "quick": return Power.Quick(Str(b, "what"));
                 case "power": return Power.Run(Str(b, "what"));
                 case "keepAwake": KeepAwake.Set(Bool(b, "value")); return true;
+                case "gameFocus": GameFocus.Set(Bool(b, "value")); return true;
                 case "speedTest": return SpeedTest.Start();
                 case "closeApp": return TopApps.Close(Str(b, "exe"), Bool(b, "force"));
                 case "brightness": return Brightness.Set(Int(b, "monitor"), Int(b, "value"));
@@ -741,6 +743,7 @@ namespace ControlPanelHelper
             s["app"] = "control-panel-helper";
             s["version"] = Program.Version;
             s["keepAwake"] = KeepAwake.On;
+            s["gameFocus"] = GameFocus.On;
             s["powerPlan"] = PowerPlans.Current();
             if (want.Contains("audio"))
             {

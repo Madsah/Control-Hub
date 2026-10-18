@@ -14,7 +14,10 @@ var T = (function () {
 		settings: { name: "Settings", icon: "settings", uri: "ms-settings:" },
 		explorer: { name: "File Explorer", icon: "explorer" },
 		calculator: { name: "Calculator", icon: "calculator", uri: "calculator:" },
-		sound: { name: "Sound settings", icon: "speaker", uri: "ms-settings:sound" },
+		// Pop-outs: a panel opens over the page (Popout, popout.js). "sound" used to open Windows' sound settings.
+		sound: { name: "Sound (pop-out)", icon: "mixer", popout: "sound" },
+		powerpanel: { name: "Power (pop-out)", icon: "power", popout: "power" },
+		soundsettings: { name: "Sound settings", icon: "speaker", uri: "ms-settings:sound", sends: "sound" },
 		lock: { name: "Lock PC", icon: "lock" },
 		nightlight: { name: "Night light settings", icon: "moon", uri: "ms-settings:nightlight" },
 		display: { name: "Display settings", icon: "desktop", uri: "ms-settings:display" },
@@ -104,7 +107,11 @@ var T = (function () {
 		}
 		if (cfg.kind === "quick") {
 			var q = QUICK[cfg.what] || {};
-			if (Helper.online) return Helper.act({ action: "quick", what: cfg.what });
+			if (q.popout) {
+				if (typeof Popout !== "undefined") Popout.open(q.popout);
+				return;
+			}
+			if (Helper.online) return Helper.act({ action: "quick", what: q.sends || cfg.what });
 			if (q.uri && Icue.openLink(q.uri)) return;
 			return U.toast("Start Control Hub for this button");
 		}
@@ -120,6 +127,18 @@ var T = (function () {
 		}
 		if (!Helper.online) return U.toast("Start Control Hub to open apps");
 		Helper.act({ action: "launch", id: cfg.id });
+	}
+
+	/* The name under a button's icon: "show" always, "hide" never (icon only), else only when it fits.
+	   A name that would be cut off ("File Expl…") is left out and the icon gets the room. */
+	function fitName(node, wrap, nm, mode) {
+		node.classList.toggle("sc-noname", mode === "hide");
+		if (mode === "hide" || mode === "show") return;
+		requestAnimationFrame(function () {
+			if (!nm.parentNode || !nm.clientWidth) return;
+			var cut = nm.scrollWidth > nm.clientWidth + 1 || wrap.scrollHeight > wrap.parentNode.clientHeight + 1;
+			if (cut) node.classList.add("sc-noname");
+		});
 	}
 
 	/* ------------------------------------------------------------------ small building blocks */
@@ -349,6 +368,7 @@ var T = (function () {
 				nm.textContent = cfg.name || "Shortcut";
 				wrap.appendChild(nm);
 				body.appendChild(wrap);
+				fitName(ctx.node, wrap, nm, cfg.label);
 			}
 			ctx.node.addEventListener("click", function () {
 				if (App.editing) return;
@@ -663,8 +683,26 @@ var T = (function () {
 
 	types.power = {
 		name: "Power", desc: "Lock, sleep, restart, shut down", icon: "power", group: "system", helper: true,
-		w: 2, h: 2, minW: 2, minH: 1, maxW: 4, maxH: 3,
+		w: 2, h: 2, minW: 1, minH: 1, maxW: 4, maxH: 3,
+		options: function () {
+			return [{ key: "style", label: "Look", type: "choice", "default": "auto", choices: [
+				{ value: "auto", label: "Automatic", sub: "Only the icon when the buttons don't fit" },
+				{ value: "buttons", label: "Buttons", sub: "Lock, sleep, restart and shut down on the tile" },
+				{ value: "icon", label: "Icon", sub: "Tap it and a power panel pops out" },
+			] }];
+		},
 		build: function (ctx) {
+			var style = (ctx.tile.cfg || {}).style || "auto";
+			if (style === "icon" || (style === "auto" && (ctx.w < 2 || (ctx.h === 1 && ctx.w <= 3)))) {
+				ctx.node.classList.add("press", "pw-iconic");
+				ctx.body.innerHTML = '<div class="sc"><span class="logo">' + svg("power") + '</span><span class="nm">Power</span></div>';
+				fitName(ctx.node, ctx.body.firstChild, ctx.body.querySelector(".nm"));
+				ctx.node.addEventListener("click", function () {
+					if (App.editing) return;
+					if (typeof Popout !== "undefined") Popout.open("power");
+				});
+				return null;
+			}
 			ctx.body.innerHTML = head("power", "Power") + '<div class="pw-grid"></div>';
 			var grid = ctx.body.querySelector(".pw-grid");
 			var items = [

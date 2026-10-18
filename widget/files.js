@@ -2,10 +2,11 @@
    When the panel loads from Control Hub, Control Hub's own copy of this list is used, so new files arrive with updates.
    "version" must be the same as manifest.json's version. */
 CP_FILES = {
-	version: "5.1.1",
+	version: "5.2.0",
 	styles: [
 		"styles/panel.css",
-		"styles/fresh.css"
+		"styles/fresh.css",
+		"styles/popout.css"
 	],
 	scripts: [
 		"scripts/util.js",
@@ -27,6 +28,7 @@ CP_FILES = {
 		"scripts/round9.js",
 		"scripts/round10.js",
 		"scripts/round11.js",
+		"scripts/popout.js",
 		"scripts/main.js"
 	],
 };

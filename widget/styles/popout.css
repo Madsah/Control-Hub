@@ -1,0 +1,241 @@
+/* Control Panel — pop-out panels (popout.js), icon-only buttons and the Power tile's icon look. */
+
+/* ------------------------------------------------------------------ the pop-out */
+.pop {
+	position: fixed;
+	inset: 0;
+	z-index: 45;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2vh 2vw;
+	background: rgba(0, 0, 0, 0);
+	transition: background-color 0.18s ease;
+}
+
+.pop.in {
+	background: rgba(0, 0, 0, 0.55);
+}
+
+.pop-card {
+	width: min(96vw, 2400px);
+	height: 92vh;
+	display: flex;
+	flex-direction: column;
+	border-radius: calc(var(--cell) * 0.18);
+	background: var(--panel);
+	color: var(--panel-text, var(--text));
+	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+	overflow: hidden;
+	transform: translateY(14px) scale(0.98);
+	opacity: 0;
+	transition: transform 0.18s cubic-bezier(0.3, 0.7, 0.4, 1), opacity 0.18s ease;
+}
+
+.pop.in .pop-card {
+	transform: none;
+	opacity: 1;
+}
+
+.pop-power .pop-card {
+	width: min(96vw, 1900px);
+	height: auto;
+	max-height: 92vh;
+}
+
+.pop-head {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 14px 8px 20px;
+	font-size: max(17px, calc(var(--cell) * 0.15));
+}
+
+.pop-ic {
+	display: grid;
+	place-items: center;
+	color: var(--accent);
+	font-size: 1.35em;
+}
+
+.pop-title {
+	flex: 1 1 auto;
+	font-weight: 700;
+}
+
+.pop-extra {
+	display: flex;
+	gap: 8px;
+}
+
+.pop-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: max(14px, calc(var(--cell) * 0.11));
+	padding: 0.55em 1.1em;
+}
+
+.pop-x {
+	width: max(44px, calc(var(--cell) * 0.36));
+	height: max(44px, calc(var(--cell) * 0.36));
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	font-size: max(20px, calc(var(--cell) * 0.17));
+	background: rgba(127, 140, 160, 0.18);
+	color: inherit;
+}
+
+.pop-x:active {
+	filter: brightness(1.2);
+}
+
+.pop-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	padding: 4px 16px 16px;
+	display: flex;
+	flex-direction: column;
+}
+
+/* The pop-out's tiles sit in a grid instead of on the page's spots. */
+.pop .tile.pop-tile {
+	position: relative;
+	left: auto;
+	top: auto;
+	width: auto;
+	height: auto;
+	min-height: 0;
+	min-width: 0;
+}
+
+/* ------------------------------------------------------------------ Sound */
+.pop-grid {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+	gap: calc(var(--cell) * 0.1);
+}
+
+.pop-col {
+	display: grid;
+	grid-template-rows: repeat(3, minmax(0, 1fr));
+	gap: calc(var(--cell) * 0.1);
+	min-height: 0;
+}
+
+/* ------------------------------------------------------------------ Power */
+.pop-pw {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: calc(var(--cell) * 0.1);
+	height: min(52vh, calc(var(--cell) * 1.6));
+	min-height: 140px;
+}
+
+.pop-pw-btn {
+	position: relative;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35em;
+	border-radius: calc(var(--cell) * 0.14);
+	background: var(--tile);
+	color: var(--text);
+	font-size: max(16px, calc(var(--cell) * 0.15));
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+	touch-action: none;
+	user-select: none;
+}
+
+.pop-pw-btn svg.ic {
+	position: relative;
+	font-size: max(30px, calc(var(--cell) * 0.38));
+	color: var(--accent);
+}
+
+.pop-pw-btn.danger svg.ic {
+	color: var(--danger, #ef4444);
+}
+
+.pop-pw-btn b {
+	position: relative;
+	font-weight: 700;
+}
+
+.pop-pw-btn em {
+	position: relative;
+	font-style: normal;
+	font-size: 0.72em;
+	color: var(--muted);
+}
+
+/* Holding fills the button from the bottom; when it's full, it happens. */
+.pop-fill {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 0;
+	background: var(--accent);
+	opacity: 0.35;
+}
+
+.pop-pw-btn.danger .pop-fill {
+	background: var(--danger, #ef4444);
+	opacity: 0.45;
+}
+
+.pop-pw-btn.holding .pop-fill {
+	height: 100%;
+	transition: height 0.7s linear;
+}
+
+.pop-hint {
+	margin: 12px 4px 0;
+	font-size: max(13px, calc(var(--cell) * 0.1));
+	color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ icon only */
+/* A button whose name doesn't fit (or set to "Icon only"): just the icon, a bit bigger. */
+.tile.sc-noname .sc .nm {
+	display: none;
+}
+
+.tile.sc-noname .sc .logo {
+	width: calc(var(--u) * 0.62);
+	height: calc(var(--u) * 0.62);
+	font-size: calc(var(--u) * 0.46);
+}
+
+.tile.pw-iconic .sc {
+	justify-content: center;
+}
+
+.tile.pw-iconic .logo {
+	width: calc(var(--u) * 0.5);
+	height: calc(var(--u) * 0.5);
+	font-size: calc(var(--u) * 0.42);
+	color: var(--accent);
+}
+
+/* The name option in the shortcut picker. */
+.pick-name {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 8px 0 4px;
+}
+
+.pick-name > span {
+	font-size: 13px;
+	color: var(--muted);
+	margin-right: 4px;
+}

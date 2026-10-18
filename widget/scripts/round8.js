@@ -590,6 +590,7 @@ var Round8 = (function () {
 		});
 		if (fav.min) chooser(s9, L().pages.map(function (p) { return [p.id, p.name]; }), fav.page, function (v) { setOpt("fav", { page: v, min: fav.min }); idleReset(); again(); });
 		if (window.Round10) Round10.lookSection(sec, chooser, toggleRow, again);
+		if (window.Popout && Popout.lookSection) Popout.lookSection(sec, toggleRow, again);
 	}
 
 	/* ================================================================== wiring */

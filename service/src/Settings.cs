@@ -41,6 +41,7 @@ namespace ControlPanelHelper
         public string BackupFolder { get; set; }    // where automatic backups go (null = OneDrive or Documents)
         public bool AutoBackupOff { get; set; }
         public long LastAutoBackup { get; set; }    // UTC ticks
+        public bool GameFocusOff { get; set; }      // don't give the focus back to the game after a touch on the panel
 
         public SettingsData()
         {

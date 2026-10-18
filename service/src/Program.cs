@@ -12,7 +12,7 @@ namespace ControlPanelHelper
 {
     static class Program
     {
-        public const string Version = "3.2.0";
+        public const string Version = "3.3.0";
         public const string AppName = "Control Hub Service";
         /// <summary>The old helper was set to start with Windows (so this service takes that over).</summary>
         public static bool HadOldAutostart;
@@ -218,6 +218,7 @@ namespace ControlPanelHelper
             ThreadPool.QueueUserWorkItem(delegate { Notifs.Start(); });
             try { AutoBackup.Start(); } catch (Exception ex) { Log.Write("Automatic backup: " + ex.Message); }
             try { PageKeys.Start(); } catch (Exception ex) { Log.Write("Page shortcuts: " + ex.Message); }
+            try { GameFocus.Start(); } catch (Exception ex) { Log.Write("Game focus: " + ex.Message); }
             try { ClipHistory.Start(ui); } catch (Exception ex) { Log.Write("Clipboard listener: " + ex.Message); }
 
             server = new Server(Settings.Current.Port);
