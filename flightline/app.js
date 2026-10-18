@@ -188,9 +188,10 @@ function makeMap(box, path, airports) {
 		if (!box.isConnected) return null;
 		if (!L) { drawPlain(box, path); return null; }
 		const map = L.map(box, { zoomControl: true, attributionControl: true, worldCopyJump: true });
-		L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-			maxZoom: 18, subdomains: "abcd",
-			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+		// OpenStreetMap's own map pictures (free, no key), turned dark to match FlightLine (map.js: dark).
+		L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+			maxZoom: 18, dark: true,
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 		}).addTo(map);
 		const ll = path.map(p => [p[0], p[1]]);
 		const line = L.polyline(ll, { color: "#2dd4bf", weight: 3, opacity: 0.95 }).addTo(map);

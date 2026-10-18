@@ -84,7 +84,7 @@ const MiniL = (function () {
 
 	/* Zoom by one step, keeping the point under the mouse (or the centre) where it is. */
 	Map.prototype.zoomBy = function (d, px, py) {
-		const nz = Math.max(2, Math.min(17, this.z + d));
+		const nz = Math.max(1.5, Math.min(17, Math.round((this.z + d) * 2) / 2));
 		if (nz === this.z) return;
 		const [w, h] = this.size();
 		px = px == null ? w / 2 : px; py = py == null ? h / 2 : py;
@@ -97,7 +97,7 @@ const MiniL = (function () {
 
 	Map.prototype.setView = function (p, z) {
 		p = ll(p);
-		this.z = z == null ? this.z : Math.round(z);
+		this.z = z == null ? this.z : z;
 		const c = project(p[0], p[1], this.z);
 		this.cx = c[0]; this.cy = c[1];
 		this.draw();
@@ -109,11 +109,10 @@ const MiniL = (function () {
 		if (!b.valid()) return this;
 		const pad = (o && o.padding ? o.padding[0] : 20) * 2, maxZ = o && o.maxZoom != null ? o.maxZoom : 14;
 		const [w, h] = this.size();
-		let z = maxZ;
-		for (; z > 2; z--) {
-			const a = project(b.n, b.w, z), c = project(b.s, b.e, z);
-			if (c[0] - a[0] <= w - pad && c[1] - a[1] <= h - pad) break;
-		}
+		// The zoom (also in between whole steps) at which everything just fits.
+		const a0 = project(b.n, b.w, 0), c0 = project(b.s, b.e, 0);
+		const fx = (w - pad) / Math.max(1e-9, c0[0] - a0[0]), fy = (h - pad) / Math.max(1e-9, c0[1] - a0[1]);
+		const z = Math.max(1.5, Math.min(maxZ, Math.log2(Math.min(fx, fy))));
 		const a = project(b.n, b.w, z), c = project(b.s, b.e, z);
 		this.z = z; this.cx = (a[0] + c[0]) / 2; this.cy = (a[1] + c[1]) / 2;
 		this.draw();
@@ -141,13 +140,15 @@ const MiniL = (function () {
 		this.svg.setAttribute("width", w); this.svg.setAttribute("height", h);
 		// Tiles
 		if (this.tileUrl) {
-			const n = Math.pow(2, this.z), x0 = Math.floor((this.cx - w / 2) / TILE), y0 = Math.floor((this.cy - h / 2) / TILE);
-			const x1 = Math.floor((this.cx + w / 2) / TILE), y1 = Math.floor((this.cy + h / 2) / TILE);
+			// Pictures from the whole zoom step below, shown a little bigger in between steps.
+			const tz = Math.max(0, Math.floor(this.z + 1e-9)), T = TILE * Math.pow(2, this.z - tz), n = Math.pow(2, tz);
+			const x0 = Math.floor((this.cx - w / 2) / T), y0 = Math.floor((this.cy - h / 2) / T);
+			const x1 = Math.floor((this.cx + w / 2) / T), y1 = Math.floor((this.cy + h / 2) / T);
 			const want = {};
 			for (let ty = Math.max(0, y0); ty <= Math.min(n - 1, y1); ty++)
 				for (let tx = x0; tx <= x1; tx++) {
-					const wx = ((tx % n) + n) % n, key = this.z + "/" + wx + "/" + ty + "/" + tx;
-					want[key] = [tx * TILE - this.cx + w / 2, ty * TILE - this.cy + h / 2, wx, ty];
+					const wx = ((tx % n) + n) % n, key = tz + "/" + wx + "/" + ty + "/" + tx;
+					want[key] = [tx * T - this.cx + w / 2, ty * T - this.cy + h / 2, wx, ty, tz, T];
 				}
 			const have = {};
 			[].slice.call(this.tiles.children).forEach(img => { if (want[img.dataset.k]) have[img.dataset.k] = img; else img.remove(); });
@@ -161,10 +162,11 @@ const MiniL = (function () {
 					img.draggable = false;
 					img.onload = () => { this.tileOk++; this.note.hidden = true; };
 					img.onerror = () => { this.tileBad++; img.style.visibility = "hidden"; if (!this.tileOk) { this.note.hidden = false; this.note.textContent = "The map pictures couldn't load (no internet?). The routes still show."; } };
-					img.src = this.tileUrl.replace("{s}", SUBS[(v[2] + v[3]) % 4]).replace("{z}", this.z).replace("{x}", v[2]).replace("{y}", v[3]).replace("{r}", window.devicePixelRatio > 1.5 ? "@2x" : "");
+					img.src = this.tileUrl.replace("{s}", SUBS[(v[2] + v[3]) % 4]).replace("{z}", v[4]).replace("{x}", v[2]).replace("{y}", v[3]).replace("{r}", "");
 					this.tiles.appendChild(img);
 				}
-				img.style.transform = "translate(" + v[0] + "px," + v[1] + "px)";
+				img.style.transform = "translate(" + v[0].toFixed(1) + "px," + v[1].toFixed(1) + "px)";
+				img.style.width = img.style.height = (v[5] + 0.5).toFixed(1) + "px";
 			});
 		}
 		// Lines, dots, labels
@@ -178,6 +180,7 @@ const MiniL = (function () {
 	function TileLayer(url, o) { this.url = url; this.o = o || {}; }
 	TileLayer.prototype.addTo = function (m) {
 		m.tileUrl = this.url;
+		m.tiles.classList.toggle("dark", !!this.o.dark);
 		m.attr.innerHTML = this.o.attribution || "";
 		m.draw();
 		return this;

@@ -1,13 +1,12 @@
 {
-  "version": "1.9.0",
+  "version": "1.9.1",
   "service": "3.8.0",
   "hub": "1.6.0",
   "widget": "5.2.3",
   "date": "2026-10-18",
   "notes": [
-    "Find a flight has a new look: a search bar at the top, a big map with all the routes, and the flights as cards.",
-    "New: Airports: Big only (default), Big and medium, or All.",
-    "The maps in FlightLine work again: FlightLine now has its own map, so nothing extra has to load from the internet except the map pictures.",
-    "From 1.8: regions, your add-on scenery, and scenery deals from iniBuilds and Contrail."
+    "The map works without a key: it now uses OpenStreetMap's own map, turned dark to match FlightLine.",
+    "The map zooms to fit the routes better (also in between zoom steps).",
+    "Find a flight: the airport code box sits next to the From choices again, instead of a tall box."
   ]
 }

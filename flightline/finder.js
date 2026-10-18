@@ -60,9 +60,9 @@ const Finder = (function () {
 		h += '<div class="panel fbar">' +
 			'<div class="fbar-main">' +
 			'<label class="fb fb-plane"><em>Plane</em><select id="fPlane">' + PLANES.map(x => '<option value="' + x[0] + '"' + (x[0] === p[0] ? " selected" : "") + ">" + esc(x[1]) + "</option>").join("") + "</select></label>" +
-			'<div class="fb"><em>From</em><div class="seg" id="fFromTabs">' +
+			'<div class="fb"><em>From</em><div class="fb-row"><div class="seg" id="fFromTabs">' +
 			[["last", "Last landing"], ["here", "Where I am"], ["code", "Airport"], ["any", "Anywhere"]].map(x => '<button data-f="' + x[0] + '"' + (opts.from === x[0] ? ' class="on"' : "") + ">" + x[1] + "</button>").join("") +
-			'</div><input class="search code" id="fCode" maxlength="4" placeholder="EKCH" value="' + esc(opts.fromCode || "") + '"' + (opts.from === "code" ? "" : " hidden") + "></div>" +
+			'</div><input class="search code" id="fCode" maxlength="4" placeholder="EKCH" value="' + esc(opts.fromCode || "") + '"' + (opts.from === "code" ? "" : " hidden") + "></div></div>" +
 			'<div class="fb"><em>Flight time</em><div class="seg" id="fTime">' + TIMES.map((t, i) => chip(i === opts.time, 'data-i="' + i + '"', t[2].replace(" – ", "–"))).join("") + "</div></div>" +
 			'<div class="fb-go"><button class="btn accent big" id="fGo">Find flights</button><button class="btn big" id="fSurprise" title="One random flight">Surprise me</button></div>' +
 			"</div>" +

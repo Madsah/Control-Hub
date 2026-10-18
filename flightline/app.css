@@ -414,3 +414,8 @@ select { background: var(--win); color: var(--text); border: 1px solid var(--lin
 .mm-attr a { color: var(--sub); }
 .mm-note { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(11, 17, 27, 0.9); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: var(--sub); z-index: 2; }
 .dest-label { transform: translate(8px, -50%); font-size: 11.5px; font-weight: 700; color: var(--sub); text-shadow: 0 1px 2px #000, 0 0 4px #000; white-space: nowrap; }
+/* OpenStreetMap's light map, turned dark. */
+.mm-tiles.dark img { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.55); }
+.fb-row { display: flex; gap: 8px; align-items: center; }
+.fb .search.code { flex: none; height: 38px; width: 86px; }
+.finder-map { height: 400px; }
