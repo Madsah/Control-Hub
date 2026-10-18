@@ -125,9 +125,20 @@ namespace ControlHub
                 };
                 using (var p = Process.Start(psi))
                 {
-                    string line;
-                    while ((line = p.StandardOutput.ReadLine()) != null) OnLine(line);
-                    p.WaitForExit();
+                    // Read on its own thread: programs the installer starts can keep the output open after it has finished,
+                    // so the end of the installer is noticed by the installer itself ending, not by the output closing.
+                    var reader = new Thread(delegate ()
+                    {
+                        try
+                        {
+                            string line;
+                            while ((line = p.StandardOutput.ReadLine()) != null) OnLine(line);
+                        }
+                        catch { }
+                    }) { IsBackground = true };
+                    reader.Start();
+                    while (!p.WaitForExit(500)) { }
+                    reader.Join(1500);   // the last lines
                     code = p.ExitCode;
                 }
             }
@@ -384,11 +395,10 @@ namespace ControlHub
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             // Closing in the middle would leave the installer running hidden: say so and let it finish.
-            if (state == State.Working && e.CloseReason == CloseReason.UserClosing)
+            if (state == State.Working && e.CloseReason == CloseReason.UserClosing &&
+                !Dlg.Confirm(this, "Close the update window?", "The update is still running and finishes by itself, also without this window. Control Hub opens when it's done.", "Close"))
             {
                 e.Cancel = true;
-                status = "Please wait, the update finishes by itself in a moment.";
-                Invalidate();
                 return;
             }
             anim.Stop();

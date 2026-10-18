@@ -1,13 +1,12 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "service": "3.4.0",
-  "hub": "1.5.0",
+  "hub": "1.5.1",
   "widget": "5.2.2",
   "date": "2026-10-18",
   "notes": [
-    "New: FlightLine, your flight logbook. Every MSFS flight is recorded by itself: route, path on a map, altitude, what happened when, and the landing.",
-    "Open it from Control Hub → Projects, the Start menu, or a desktop shortcut (Projects → Desktop shortcut).",
-    "Your flights from the old flight log are added to the logbook.",
-    "Panel: a FlightLine quick action for any button."
+    "The update window no longer gets stuck on Finishing (the update itself was done).",
+    "The update window can be closed while it works; the update finishes by itself.",
+    "From 1.5.0: FlightLine, your flight logbook. Every MSFS flight is recorded by itself."
   ]
 }
