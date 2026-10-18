@@ -1,13 +1,13 @@
 {
-  "version": "1.8.2",
-  "service": "3.7.2",
+  "version": "1.9.0",
+  "service": "3.8.0",
   "hub": "1.6.0",
   "widget": "5.2.3",
   "date": "2026-10-18",
   "notes": [
-    "Fixes the 1.8.0 and 1.8.1 updates not building.",
-    "Find a flight: regions (Europe and Middle East to start with, or anywhere), and \"Anywhere in my regions\" as departure.",
-    "Your add-on scenery is found by itself: flights are marked \"Your scenery\", and you can put them first or show only those.",
-    "Airport scenery on sale at iniBuilds and Contrail is checked once a day and shown on the flights it fits, plus a list of the best deals."
+    "Find a flight has a new look: a search bar at the top, a big map with all the routes, and the flights as cards.",
+    "New: Airports: Big only (default), Big and medium, or All.",
+    "The maps in FlightLine work again: FlightLine now has its own map, so nothing extra has to load from the internet except the map pictures.",
+    "From 1.8: regions, your add-on scenery, and scenery deals from iniBuilds and Contrail."
   ]
 }

@@ -283,6 +283,8 @@ namespace ControlPanelHelper
                     q.Regions = Regions(req.Param("regions"));
                     string sc = req.Param("scenery");
                     q.Scenery = sc == "prefer" || sc == "only" ? sc : "any";
+                    string size = req.Param("size");
+                    q.Size = size == "medium" || size == "all" ? size : "big";
                     string from = req.Param("from") ?? "";
                     q.From = from.Equals("any", StringComparison.OrdinalIgnoreCase) ? "ANY" : RouteData.ResolveFrom(from);
                     var found = RouteData.Find(q);

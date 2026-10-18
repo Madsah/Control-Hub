@@ -213,6 +213,7 @@ namespace ControlPanelHelper
             public bool NewOnly, Surprise;
             public HashSet<string> Regions;        // null or empty = anywhere
             public string Scenery = "any";        // "any", "prefer" or "only" (destination has your scenery)
+            public string Size = "big";           // "big" (large airports), "medium" (large and medium) or "all"
         }
 
         // ------------------------------------------------------------------ regions
@@ -283,7 +284,7 @@ namespace ControlPanelHelper
                 foreach (var kv in rts)
                 {
                     Airport a;
-                    if (kv.Value.Count >= 4 && apts.TryGetValue(kv.Key, out a) && InRegions(a, q.Regions) && Long(lengths, a.Icao, q.MinRwyFt)) pool.Add(kv.Key);
+                    if (kv.Value.Count >= 4 && apts.TryGetValue(kv.Key, out a) && InRegions(a, q.Regions) && Long(lengths, a.Icao, q.MinRwyFt) && AirportSizes.Ok(a.Icao, q.Size)) pool.Add(kv.Key);
                 }
                 for (int tries = 0; tries < 40 && pool.Count > 0; tries++)
                 {
@@ -331,6 +332,7 @@ namespace ControlPanelHelper
             foreach (var k in keyed) { if (outList.Count >= max) break; outList.Add(k.Value); }
             res["flights"] = outList;
             res["routesDate"] = IndexDate.ToString("yyyy-MM-dd", Inv);
+            if (!AirportSizes.Ready) res["sizesNote"] = "Airport sizes are still being fetched, so all sizes are shown for now.";
             return res;
         }
 
@@ -352,6 +354,7 @@ namespace ControlPanelHelper
                 Airport dest;
                 if (!apts.TryGetValue(r.To, out dest)) continue;
                 if (!InRegions(dest, q.Regions)) continue;
+                if (!AirportSizes.Ok(dest.Icao, q.Size)) continue;
                 double nm = FlightRec.Nm(origin.Lat, origin.Lon, dest.Lat, dest.Lon);
                 if (nm < minNm || nm > maxNm) continue;
                 double rwy = 0;
@@ -508,6 +511,102 @@ namespace ControlPanelHelper
                 return "";
             }
             return from ?? "";
+        }
+    }
+
+    /// <summary>
+    /// How big each airport is (large / medium / small), from OurAirports' free airport list, downloaded once a month.
+    /// Only the large and medium ones are kept in memory, and only while the flight finder is used.
+    /// </summary>
+    static class AirportSizes
+    {
+        const string Url = "https://davidmegginson.github.io/ourairports-data/airports.csv";
+        static readonly string FilePath = Path.Combine(Settings.Folder, "airports.csv");
+        static readonly object Gate = new object();
+        static HashSet<string> large, medium;
+        static DateTime loadedFrom = DateTime.MinValue;
+        static volatile bool fetching;
+        static readonly Timer drop = new Timer(delegate { lock (Gate) { large = null; medium = null; } }, null, Timeout.Infinite, Timeout.Infinite);
+
+        public static bool Ready { get { lock (Gate) { Load(); return large != null; } } }
+
+        /// <summary>Is the airport big enough? Without the list (yet), every airport is.</summary>
+        public static bool Ok(string icao, string size)
+        {
+            if (size != "big" && size != "medium") return true;
+            lock (Gate)
+            {
+                Load();
+                if (large == null) return true;
+                drop.Change(600000, Timeout.Infinite);
+                return large.Contains(icao) || (size == "medium" && medium.Contains(icao));
+            }
+        }
+
+        static void Load()
+        {
+            if (!File.Exists(FilePath) || (DateTime.UtcNow - File.GetLastWriteTimeUtc(FilePath)).TotalDays > 30) Fetch();
+            if (!File.Exists(FilePath)) return;
+            if (large != null && File.GetLastWriteTimeUtc(FilePath) <= loadedFrom) return;
+            var l = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var m = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                int iIdent = -1, iType = -1, iIcao = -1, iGps = -1;
+                bool first = true;
+                foreach (var line in File.ReadLines(FilePath, Encoding.UTF8))
+                {
+                    var f = Freqs.SplitCsv(line);
+                    if (first)
+                    {
+                        first = false;
+                        iIdent = f.IndexOf("ident"); iType = f.IndexOf("type"); iIcao = f.IndexOf("icao_code"); iGps = f.IndexOf("gps_code");
+                        if (iIdent < 0 || iType < 0) return;
+                        continue;
+                    }
+                    if (f.Count <= iType) continue;
+                    string type = f[iType];
+                    var set = type == "large_airport" ? l : type == "medium_airport" ? m : null;
+                    if (set == null) continue;
+                    foreach (int i in new[] { iIdent, iIcao, iGps })
+                        if (i >= 0 && i < f.Count && f[i].Length == 4) set.Add(f[i]);
+                }
+            }
+            catch (Exception ex) { Log.Write("Airport sizes: " + ex.Message); return; }
+            if (l.Count < 100) return;
+            large = l; medium = m;
+            loadedFrom = File.GetLastWriteTimeUtc(FilePath);
+        }
+
+        static void Fetch()
+        {
+            if (fetching) return;
+            fetching = true;
+            var t = new Thread(delegate ()
+            {
+                try
+                {
+                    ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;
+                    var req = (HttpWebRequest)WebRequest.Create(Url);
+                    req.Timeout = 60000;
+                    req.ReadWriteTimeout = 60000;
+                    req.UserAgent = "ControlHub/" + Program.Version;
+                    string tmp = FilePath + ".tmp";
+                    using (var res = req.GetResponse())
+                    using (var st = res.GetResponseStream())
+                    using (var f = File.Create(tmp)) st.CopyTo(f);
+                    if (new FileInfo(tmp).Length < 1000000) throw new Exception("the airport list looks incomplete");
+                    lock (Gate)
+                    {
+                        if (File.Exists(FilePath)) File.Delete(FilePath);
+                        File.Move(tmp, FilePath);
+                    }
+                    Log.Write("Airport sizes: downloaded the airport list");
+                }
+                catch (Exception ex) { Log.Write("Airport sizes: " + ex.Message); }
+                finally { fetching = false; }
+            }) { IsBackground = true, Priority = ThreadPriority.BelowNormal };
+            t.Start();
         }
     }
 }

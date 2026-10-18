@@ -180,30 +180,8 @@ function wireLive() {
 }
 
 /* ------------------------------------------------------------------ the map (Leaflet from the internet; a plain drawing without it) */
-let leafletJob = null;
-function leaflet() {
-	if (window.L) return Promise.resolve(window.L);
-	if (leafletJob) return leafletJob;
-	const hosts = ["https://unpkg.com/leaflet@1.9.4/dist/", "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/"];
-	leafletJob = new Promise(res => {
-		let done = false;
-		const finish = v => { if (!done) { done = true; if (!v) leafletJob = null; res(v); } };
-		(function load(i) {
-			if (i >= hosts.length) return finish(null);
-			const css = document.createElement("link");
-			css.rel = "stylesheet";
-			css.href = hosts[i] + "leaflet.css";
-			document.head.appendChild(css);
-			const s = document.createElement("script");
-			s.src = hosts[i] + "leaflet.js";
-			s.onload = () => finish(window.L || null);
-			s.onerror = () => { css.remove(); load(i + 1); };
-			document.head.appendChild(s);
-		})(0);
-		setTimeout(() => finish(window.L || null), 10000);
-	});
-	return leafletJob;
-}
+/* The map: FlightLine's own small map (map.js), so nothing has to load from the internet except the map pictures. */
+function leaflet() { return Promise.resolve(typeof MiniL !== "undefined" ? MiniL : null); }
 
 function makeMap(box, path, airports) {
 	return leaflet().then(L => {

@@ -24,6 +24,7 @@ const Finder = (function () {
 		if (!opts) opts = { plane: guessPlane(), from: "last", fromCode: "", time: 1, newOnly: false };
 		if (!Array.isArray(opts.regions)) opts.regions = ["EU", "ME"];
 		if (!opts.scenery) opts.scenery = "any";
+		if (!opts.size) opts.size = "big";
 	}
 	function keep() { try { localStorage.setItem("flFinder", JSON.stringify(opts)); } catch (e) {} }
 
@@ -55,22 +56,24 @@ const Finder = (function () {
 	function draw() {
 		const p = plane();
 		let h = '<div class="head"><div class="grow"><h1>Find a flight</h1><p>Real airline routes: flights that have actually been flown, that fit your plane and your time.</p></div></div>';
-		h += '<div class="panel side-panel finder-form">' +
-			'<label class="field">Plane<select id="fPlane">' + PLANES.map(x => '<option value="' + x[0] + '"' + (x[0] === p[0] ? " selected" : "") + ">" + esc(x[1]) + " (" + x[0] + ")</option>").join("") + "</select></label>" +
-			'<div class="field">From<div class="from-row"><div class="tabs" id="fFromTabs">' +
-			'<button data-f="last"' + (opts.from === "last" ? ' class="on"' : "") + ">Last landing</button>" +
-			'<button data-f="here"' + (opts.from === "here" ? ' class="on"' : "") + ">Where I am in MSFS</button>" +
-			'<button data-f="code"' + (opts.from === "code" ? ' class="on"' : "") + ">Airport</button>" +
-			'<button data-f="any"' + (opts.from === "any" ? ' class="on"' : "") + ">Anywhere in my regions</button></div>" +
-			'<input class="search code" id="fCode" maxlength="4" placeholder="EKCH" value="' + esc(opts.fromCode || "") + '"' + (opts.from === "code" ? "" : " hidden") + "></div>" +
-			'<span class="muted small" id="fFromNote"></span></div>' +
-			'<div class="field">Flight time<div class="chips" id="fTime">' + TIMES.map((t, i) => '<button class="chip' + (i === opts.time ? " on" : "") + '" data-i="' + i + '">' + t[2] + "</button>").join("") + "</div></div>" +
-			'<div class="field wide">Where to<div class="chips" id="fReg"><button class="chip' + (opts.regions.length ? "" : " on") + '" data-r="">Anywhere</button>' +
-			REGIONS.map(r => '<button class="chip' + (opts.regions.indexOf(r[0]) >= 0 ? " on" : "") + '" data-r="' + r[0] + '">' + r[1] + "</button>").join("") + "</div></div>" +
-			'<div class="field">Scenery<div class="chips" id="fScen">' + [["any", "Any airport"], ["prefer", "My scenery first"], ["only", "Only my scenery"]].map(x =>
-				'<button class="chip' + (opts.scenery === x[0] ? " on" : "") + '" data-s="' + x[0] + '">' + x[1] + "</button>").join("") + '</div><span class="muted small" id="fScenNote"></span></div>' +
-			'<label class="chk big-chk"><input type="checkbox" id="fNew"' + (opts.newOnly ? " checked" : "") + "> Only airports I haven't flown to</label>" +
-			'<div class="find-btns"><button class="btn accent big" id="fGo">Find flights</button><button class="btn big" id="fSurprise">Surprise me</button></div>' +
+		const chip = (on, attr, text) => '<button class="chip' + (on ? " on" : "") + '" ' + attr + ">" + text + "</button>";
+		h += '<div class="panel fbar">' +
+			'<div class="fbar-main">' +
+			'<label class="fb fb-plane"><em>Plane</em><select id="fPlane">' + PLANES.map(x => '<option value="' + x[0] + '"' + (x[0] === p[0] ? " selected" : "") + ">" + esc(x[1]) + "</option>").join("") + "</select></label>" +
+			'<div class="fb"><em>From</em><div class="seg" id="fFromTabs">' +
+			[["last", "Last landing"], ["here", "Where I am"], ["code", "Airport"], ["any", "Anywhere"]].map(x => '<button data-f="' + x[0] + '"' + (opts.from === x[0] ? ' class="on"' : "") + ">" + x[1] + "</button>").join("") +
+			'</div><input class="search code" id="fCode" maxlength="4" placeholder="EKCH" value="' + esc(opts.fromCode || "") + '"' + (opts.from === "code" ? "" : " hidden") + "></div>" +
+			'<div class="fb"><em>Flight time</em><div class="seg" id="fTime">' + TIMES.map((t, i) => chip(i === opts.time, 'data-i="' + i + '"', t[2].replace(" – ", "–"))).join("") + "</div></div>" +
+			'<div class="fb-go"><button class="btn accent big" id="fGo">Find flights</button><button class="btn big" id="fSurprise" title="One random flight">Surprise me</button></div>' +
+			"</div>" +
+			'<div class="fbar-filters">' +
+			'<div class="fl"><em>Where to</em><div class="chips" id="fReg">' + chip(!opts.regions.length, 'data-r=""', "Anywhere") +
+			REGIONS.map(r => chip(opts.regions.indexOf(r[0]) >= 0, 'data-r="' + r[0] + '"', r[1])).join("") + "</div></div>" +
+			'<div class="fl"><em>Airports</em><div class="chips" id="fSize">' + [["big", "Big only"], ["medium", "Big and medium"], ["all", "All"]].map(x => chip(opts.size === x[0], 'data-z="' + x[0] + '"', x[1])).join("") + "</div></div>" +
+			'<div class="fl"><em>Scenery</em><div class="chips" id="fScen">' + [["any", "Any"], ["prefer", "Mine first"], ["only", "Only mine"]].map(x => chip(opts.scenery === x[0], 'data-s="' + x[0] + '"', x[1])).join("") + "</div></div>" +
+			'<label class="chk fl-new"><input type="checkbox" id="fNew"' + (opts.newOnly ? " checked" : "") + "> New airports only</label>" +
+			"</div>" +
+			'<div class="fbar-notes muted small"><span id="fFromNote"></span><span id="fScenNote"></span></div>' +
 			"</div>";
 		h += '<div id="fStatus"></div><div id="fOut"></div><div id="fDeals"></div>';
 		box.innerHTML = h;
@@ -98,6 +101,10 @@ const Finder = (function () {
 			keep();
 			box.querySelectorAll("#fReg .chip").forEach(x => x.classList.toggle("on", x.dataset.r ? opts.regions.indexOf(x.dataset.r) >= 0 : !opts.regions.length));
 			loadScenery(false);
+		}));
+		box.querySelectorAll("#fSize .chip").forEach(b => b.addEventListener("click", () => {
+			opts.size = b.dataset.z; keep();
+			box.querySelectorAll("#fSize .chip").forEach(x => x.classList.toggle("on", x === b));
 		}));
 		box.querySelectorAll("#fScen .chip").forEach(b => b.addEventListener("click", () => {
 			opts.scenery = b.dataset.s; keep();
@@ -176,7 +183,7 @@ const Finder = (function () {
 		if (busy) return;
 		const p = plane(), t = TIMES[opts.time] || TIMES[1];
 		const from = opts.from === "code" ? opts.fromCode : opts.from;
-		const extra = "&regions=" + opts.regions.join(",") + "&scenery=" + opts.scenery;
+		const extra = "&regions=" + opts.regions.join(",") + "&scenery=" + opts.scenery + "&size=" + opts.size;
 		const out = box.querySelector("#fOut");
 		if (!from) { out.innerHTML = '<div class="hint-box">Type an airport code, e.g. EKCH.</div>'; return; }
 		busy = true;
@@ -209,8 +216,8 @@ const Finder = (function () {
 		}
 		let h = '<div class="find-head"><div><b>' + esc(from.icao) + "</b> " + esc(from.name) + (from.scenery ? ' <span class="tag mine" title="' + esc(from.scenery.title) + '">Your scenery</span>' : "") + ' <span class="muted">· ' + (result.surprise ? "your surprise flight" : fl.length + " of " + result.total + " routes that fit") + "</span></div>" +
 			(result.surprise ? "" : '<button class="btn" id="fMore">Show others</button>') + "</div>";
-		h += '<div class="grid2 finder-grid"><div class="results">' + fl.map((f, i) => card(f, i)).join("") + '</div><div><div class="map finder-map" id="fMap"></div>' +
-			'<p class="muted small">Routes from Virtual Radar Server\'s public route list (' + esc(result.routesDate || "") + "), sent in by people who track real flights. Most are flown today; a few may have stopped.</p></div></div>";
+		h += '<div class="map finder-map" id="fMap"></div><div class="fgrid' + (result.surprise ? " one" : "") + '">' + fl.map((f, i) => card(f, i)).join("") + "</div>" +
+			'<p class="muted small">' + (result.sizesNote ? esc(result.sizesNote) + " " : "") + "Routes from Virtual Radar Server's public route list (" + esc(result.routesDate || "") + "), sent in by people who track real flights. Most are flown today; a few may have stopped.</p>";
 		out.innerHTML = h;
 		const more = out.querySelector("#fMore");
 		if (more) more.addEventListener("click", () => search(false));
@@ -225,17 +232,19 @@ const Finder = (function () {
 
 	function card(f, i) {
 		const flights = (f.flights || []).slice(0, 3);
-		const lines = (f.airlines || []).slice(0, 3).map(a => esc(a.name)).join(", ");
-		return '<div class="fcard" data-i="' + i + '"><div class="fc-top"><span class="fc-code">' + esc(f.icao) + "</span>" +
-			'<div class="fc-name"><b>' + esc(f.name) + '</b><span class="muted">' + FLAG(f.country) + " " + esc(f.city || "") + (f.city && f.country ? ", " : "") + esc(f.country || "") + "</span></div>" +
+		const lines = (f.airlines || []).slice(0, 2).map(a => esc(a.name)).join(", ") + ((f.airlines || []).length > 2 ? " +" + (f.airlines.length - 2) : "");
+		return '<div class="fcard" data-i="' + i + '">' +
+			'<div class="fc-head"><span class="fc-code">' + esc(f.icao) + '</span><span class="fc-flag">' + FLAG(f.country) + '</span><span class="grow"></span>' +
 			(f.scenery ? '<span class="tag mine" title="' + esc(f.scenery.title) + '">Your scenery</span>' : "") +
 			(f.visited ? '<span class="tag">Been there</span>' : '<span class="tag new">New</span>') + "</div>" +
-			'<div class="fc-facts num"><span><em>Distance</em>' + fmtInt(f.distNm) + ' nm</span><span><em>About</em>' + dur(f.estMin) + "</span><span><em>Runway</em>" + (f.rwyFt ? fmtInt(f.rwyFt) + " ft" : "–") + "</span></div>" +
-			(lines ? '<div class="fc-air muted">Flown by ' + lines + ((f.airlines || []).length > 3 ? " and more" : "") + "</div>" : "") +
-			(f.deal ? '<a class="fc-deal" href="#" data-url="' + esc(f.deal.url) + '"><span class="tag sale">On sale −' + f.deal.pct + "%</span> " + esc(f.deal.title) + " · <b>" + money(f.deal.price, f.deal.currency) +
-				'</b> <s class="muted">' + money(f.deal.was, f.deal.currency) + "</s> at " + esc(f.deal.store) + "</a>" : "") +
-			'<div class="fc-btns">' + flights.map(c => '<button class="chip" data-sb="' + i + '" data-flight="' + esc(c) + '" title="Plan this flight in SimBrief">' + esc(c) + "</button>").join("") +
-			'<button class="btn accent" data-sb="' + i + '" data-flight="' + esc(flights[0] || "") + '">Send to SimBrief</button></div></div>';
+			'<div class="fc-city">' + esc(f.city || f.name) + '</div><div class="fc-apt muted">' + esc(f.name) + "</div>" +
+			'<div class="fc-facts num"><span><b>' + dur(f.estMin) + "</b><em>flight</em></span><span><b>" + fmtInt(f.distNm) + " nm</b><em>distance</em></span><span><b>" +
+			(f.rwyFt ? fmtInt(f.rwyFt) + " ft" : "–") + "</b><em>runway</em></span></div>" +
+			(lines ? '<div class="fc-air muted">' + lines + "</div>" : "") +
+			(f.deal ? '<a class="fc-deal" href="#" data-url="' + esc(f.deal.url) + '"><span class="tag sale">−' + f.deal.pct + "%</span> scenery " + money(f.deal.price, f.deal.currency) +
+				' <s class="muted">' + money(f.deal.was, f.deal.currency) + "</s> · " + esc(f.deal.store) + "</a>" : "") +
+			'<div class="fc-flights">' + flights.map(c => '<button class="chip" data-sb="' + i + '" data-flight="' + esc(c) + '" title="Plan this flight number in SimBrief">' + esc(c) + "</button>").join("") + "</div>" +
+			'<button class="btn accent fc-send" data-sb="' + i + '" data-flight="' + esc(flights[0] || "") + '">Send to SimBrief</button></div>';
 	}
 
 	/* SimBrief with departure, destination, aircraft type and the flight number filled in. */
@@ -254,18 +263,39 @@ const Finder = (function () {
 		if (!el) return;
 		const path = [[from.lat, from.lon]];
 		makeMap(el, path, [{ name: from.icao, at: [from.lat, from.lon] }]).then(m => {
-			if (!m || !el.isConnected) return;
+			if (!el.isConnected) return;
+			if (!m) return plainRoutes(el, from, fl);
 			map = m;
 			lines = fl.map(f => {
 				const l = m.L.polyline(arc([from.lat, from.lon], [f.lat, f.lon]), { color: f.visited ? "#8c9ab0" : "#2dd4bf", weight: 2, opacity: 0.75 }).addTo(m.map);
 				m.L.circleMarker([f.lat, f.lon], { radius: 4, color: "#0b111b", weight: 1, fillColor: f.visited ? "#8c9ab0" : "#2dd4bf", fillOpacity: 1 }).addTo(m.map)
 					.bindTooltip(f.icao + " · " + f.distNm + " nm", { direction: "top" });
+				m.L.marker([f.lat, f.lon], { icon: m.L.divIcon({ html: '<div class="dest-label">' + esc(f.icao) + "</div>" }), interactive: false }).addTo(m.map);
 				return l;
 			});
 			const b = m.L.latLngBounds([[from.lat, from.lon]].concat(fl.map(f => [f.lat, f.lon])));
 			m.map.fitBounds(b, { padding: [30, 30], maxZoom: 8 });
 		});
 	}
+	/* Without the internet (no map tiles): the routes on their own. */
+	function plainRoutes(el, from, fl) {
+		const pts = [[from.lat, from.lon]].concat(fl.map(f => [f.lat, f.lon]));
+		let a = 90, b = -90, c = 180, d = -180;
+		pts.forEach(p => { a = Math.min(a, p[0]); b = Math.max(b, p[0]); c = Math.min(c, p[1]); d = Math.max(d, p[1]); });
+		const W = 1200, H = 330, k = Math.cos(((a + b) / 2) * Math.PI / 180), sx = Math.max(0.5, (d - c) * k), sy = Math.max(0.5, b - a), sc = Math.min((W - 120) / sx, (H - 70) / sy);
+		const X = p => ((p[1] - c) * k * sc + (W - sx * sc) / 2), Y = p => ((b - p[0]) * sc + (H - sy * sc) / 2);
+		const o = [from.lat, from.lon];
+		let g = "";
+		fl.forEach(f => {
+			const q = [f.lat, f.lon], col = f.visited ? "#8c9ab0" : "#2dd4bf";
+			const mx = (X(o) + X(q)) / 2 + (Y(q) - Y(o)) * 0.12, my = (Y(o) + Y(q)) / 2 - (X(q) - X(o)) * 0.12;
+			g += '<path d="M' + X(o) + " " + Y(o) + " Q" + mx + " " + my + " " + X(q) + " " + Y(q) + '" stroke="' + col + '" stroke-width="2" fill="none" opacity=".75"/>' +
+				'<circle cx="' + X(q) + '" cy="' + Y(q) + '" r="4" fill="' + col + '"/><text x="' + (X(q) + 7) + '" y="' + (Y(q) + 4) + '" fill="#c9d3e3" stroke="none" font-size="12" font-weight="700">' + esc(f.icao) + "</text>";
+		});
+		g += '<circle cx="' + X(o) + '" cy="' + Y(o) + '" r="6" fill="#e6ecf5"/><text x="' + (X(o) + 9) + '" y="' + (Y(o) + 5) + '" fill="#e6ecf5" stroke="none" font-size="14" font-weight="800">' + esc(from.icao) + "</text>";
+		el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:100%">' + g + '</svg><div class="note">Map tiles need the internet</div>';
+	}
+
 	/* A gentle great-circle-like curve between two points. */
 	function arc(a, b) {
 		const pts = [], n = 24;

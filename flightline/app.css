@@ -353,3 +353,64 @@ select { background: var(--win); color: var(--text); border: 1px solid var(--lin
 .price .tag { margin-left: 6px; }
 .deals-note { padding: 0 18px 12px; margin: 6px 0 0; }
 #fScenNote a { color: var(--acc); }
+
+/* ------------------------------------------------------------------ find a flight, layout 2: a search bar, the map, then cards */
+.fbar { padding: 16px 18px 12px; margin-bottom: 16px; }
+.fbar-main { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.fb { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fb em, .fl em { font-style: normal; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--mute); }
+.fb-plane select { min-width: 180px; height: 38px; }
+.fb > div { display: flex; gap: 8px; align-items: center; }
+.seg { display: inline-flex; background: var(--win); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 2px; height: 38px; }
+.seg button, .seg .chip { border: 0; background: none; border-radius: 6px; padding: 0 10px; height: 30px; color: var(--sub); font-size: 13.5px; white-space: nowrap; }
+.seg button.on, .seg .chip.on { background: var(--raise); color: var(--text); font-weight: 600; box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.45); }
+.seg button:hover:not(.on), .seg .chip:hover:not(.on) { color: var(--text); }
+.fb .search.code { height: 38px; }
+.fb-go { margin-left: auto; display: flex; gap: 8px; }
+.fb-go .btn.big { margin: 0; height: 40px; }
+.fbar-filters { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: flex-start; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(36, 48, 68, 0.7); }
+.fl { display: flex; flex-direction: column; gap: 6px; }
+.fl .chips { padding: 0; gap: 6px; }
+.fl .chip { cursor: pointer; color: var(--sub); padding: 3px 11px; font-size: 13px; }
+.fl .chip.on { background: rgba(45, 212, 191, 0.16); border-color: var(--acc); color: var(--text); }
+.fl-new { align-self: flex-end; margin-bottom: 4px; }
+.fbar-notes { display: flex; gap: 18px; margin-top: 8px; min-height: 16px; }
+.fbar-notes a { color: var(--acc); }
+.finder-map { height: 330px; margin-bottom: 14px; position: relative; top: auto; }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 10px; }
+.fgrid.one { grid-template-columns: minmax(0, 420px); }
+.fgrid .fcard { display: flex; flex-direction: column; padding: 14px 16px 14px; }
+.fc-head { display: flex; align-items: center; gap: 8px; }
+.fc-head .grow { flex: 1 1 auto; }
+.fc-head .tag { margin-left: 0; }
+.fgrid .fc-code { font-size: 26px; min-width: 0; line-height: 1.1; }
+.fc-flag { font-size: 20px; }
+.fc-city { font-size: 16px; font-weight: 650; margin-top: 6px; }
+.fc-apt { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fgrid .fc-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 10px; padding: 10px 0; border-top: 1px solid rgba(36, 48, 68, 0.7); border-bottom: 1px solid rgba(36, 48, 68, 0.7); }
+.fgrid .fc-facts b { display: block; font-size: 15px; }
+.fgrid .fc-facts em { display: block; font-style: normal; font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.06em; }
+.fgrid .fc-air { font-size: 12.5px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-flights { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
+.fc-flights .chip { cursor: pointer; font-weight: 600; font-size: 12px; padding: 3px 9px; }
+.fc-flights .chip:hover { border-color: var(--acc); }
+.fc-send { margin-top: auto; justify-content: center; width: 100%; }
+@media (max-width: 1100px) { .fb-go { margin-left: 0; } }
+
+/* ------------------------------------------------------------------ FlightLine's own map (map.js) */
+.mm { position: relative; overflow: hidden; background: #0a0f18; cursor: grab; touch-action: none; user-select: none; }
+.mm.dragging { cursor: grabbing; }
+.mm-tiles { position: absolute; inset: 0; }
+.mm-tiles img { position: absolute; left: 0; top: 0; width: 256px; height: 256px; max-width: none; pointer-events: none; }
+.mm-svg { position: absolute; inset: 0; width: 100% !important; height: 100% !important; stroke: none; fill: none; pointer-events: none; }
+.mm-svg circle { pointer-events: auto; }
+.mm-html { position: absolute; inset: 0; pointer-events: none; }
+.mm-marker { position: absolute; left: 0; top: 0; }
+.mm-zoom { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); z-index: 2; }
+.mm-zoom button { width: 30px; height: 30px; background: var(--raise); color: var(--text); font-size: 17px; line-height: 1; }
+.mm-zoom button + button { border-top: 1px solid var(--line); }
+.mm-zoom button:hover { background: var(--raise-hover); }
+.mm-attr { position: absolute; right: 0; bottom: 0; background: rgba(11, 17, 27, 0.75); color: var(--mute); font-size: 10.5px; padding: 2px 7px; border-top-left-radius: 6px; }
+.mm-attr a { color: var(--sub); }
+.mm-note { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(11, 17, 27, 0.9); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: var(--sub); z-index: 2; }
+.dest-label { transform: translate(8px, -50%); font-size: 11.5px; font-weight: 700; color: var(--sub); text-shadow: 0 1px 2px #000, 0 0 4px #000; white-space: nowrap; }
