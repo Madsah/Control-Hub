@@ -13,14 +13,17 @@ const Finder = (function () {
 		["AT76", "ATR 72-600", 275, 4000, 15], ["DH8D", "Dash 8-400", 330, 4500, 15], ["B350", "King Air 350", 300, 3500, 12],
 		["TBM9", "Daher TBM 930", 320, 3000, 12], ["PC12", "Pilatus PC-12", 270, 3000, 12], ["C208", "Cessna 208 Caravan", 170, 2500, 10], ["C172", "Cessna 172", 115, 2000, 10],
 	];
+	const REGIONS = [["EU", "Europe"], ["ME", "Middle East"], ["NAF", "North Africa"], ["AS", "Asia"], ["NA", "North America"], ["SA", "South America"], ["AF", "Africa"], ["OC", "Oceania"]];
 	const TIMES = [[30, 60, "30 min – 1 h"], [60, 120, "1 – 2 h"], [120, 240, "2 – 4 h"], [240, 480, "4 – 8 h"], [480, 900, "8 h +"]];
 	const FLAG = cc => /^[A-Z]{2}$/.test(cc || "") ? String.fromCodePoint(...[...cc].map(c => 0x1f1e6 + c.charCodeAt(0) - 65)) : "";
 
-	let box = null, opts = null, result = null, status = null, map = null, busy = false;
+	let box = null, opts = null, result = null, status = null, map = null, busy = false, scen = null;
 
 	function load() {
 		try { opts = JSON.parse(localStorage.getItem("flFinder") || "null"); } catch (e) { opts = null; }
 		if (!opts) opts = { plane: guessPlane(), from: "last", fromCode: "", time: 1, newOnly: false };
+		if (!Array.isArray(opts.regions)) opts.regions = ["EU", "ME"];
+		if (!opts.scenery) opts.scenery = "any";
 	}
 	function keep() { try { localStorage.setItem("flFinder", JSON.stringify(opts)); } catch (e) {} }
 
@@ -44,6 +47,7 @@ const Finder = (function () {
 		try { status = await get("/api/fl/routes"); } catch (e) { status = null; }
 		if (view !== "finder") return;
 		drawStatus();
+		loadScenery(false);
 		if (status && status.have && !result) search(false);
 		else if (status && status.building) waitForRoutes();
 	}
@@ -56,14 +60,19 @@ const Finder = (function () {
 			'<div class="field">From<div class="from-row"><div class="tabs" id="fFromTabs">' +
 			'<button data-f="last"' + (opts.from === "last" ? ' class="on"' : "") + ">Last landing</button>" +
 			'<button data-f="here"' + (opts.from === "here" ? ' class="on"' : "") + ">Where I am in MSFS</button>" +
-			'<button data-f="code"' + (opts.from === "code" ? ' class="on"' : "") + ">Airport</button></div>" +
+			'<button data-f="code"' + (opts.from === "code" ? ' class="on"' : "") + ">Airport</button>" +
+			'<button data-f="any"' + (opts.from === "any" ? ' class="on"' : "") + ">Anywhere in my regions</button></div>" +
 			'<input class="search code" id="fCode" maxlength="4" placeholder="EKCH" value="' + esc(opts.fromCode || "") + '"' + (opts.from === "code" ? "" : " hidden") + "></div>" +
 			'<span class="muted small" id="fFromNote"></span></div>' +
 			'<div class="field">Flight time<div class="chips" id="fTime">' + TIMES.map((t, i) => '<button class="chip' + (i === opts.time ? " on" : "") + '" data-i="' + i + '">' + t[2] + "</button>").join("") + "</div></div>" +
+			'<div class="field wide">Where to<div class="chips" id="fReg"><button class="chip' + (opts.regions.length ? "" : " on") + '" data-r="">Anywhere</button>' +
+			REGIONS.map(r => '<button class="chip' + (opts.regions.indexOf(r[0]) >= 0 ? " on" : "") + '" data-r="' + r[0] + '">' + r[1] + "</button>").join("") + "</div></div>" +
+			'<div class="field">Scenery<div class="chips" id="fScen">' + [["any", "Any airport"], ["prefer", "My scenery first"], ["only", "Only my scenery"]].map(x =>
+				'<button class="chip' + (opts.scenery === x[0] ? " on" : "") + '" data-s="' + x[0] + '">' + x[1] + "</button>").join("") + '</div><span class="muted small" id="fScenNote"></span></div>' +
 			'<label class="chk big-chk"><input type="checkbox" id="fNew"' + (opts.newOnly ? " checked" : "") + "> Only airports I haven't flown to</label>" +
 			'<div class="find-btns"><button class="btn accent big" id="fGo">Find flights</button><button class="btn big" id="fSurprise">Surprise me</button></div>' +
 			"</div>";
-		h += '<div id="fStatus"></div><div id="fOut"></div>';
+		h += '<div id="fStatus"></div><div id="fOut"></div><div id="fDeals"></div>';
 		box.innerHTML = h;
 		const $$ = s => box.querySelector(s);
 		$$("#fPlane").addEventListener("change", e => { opts.plane = e.target.value; keep(); });
@@ -81,10 +90,55 @@ const Finder = (function () {
 			box.querySelectorAll("#fTime .chip").forEach(x => x.classList.toggle("on", x === b));
 		}));
 		$$("#fNew").addEventListener("change", e => { opts.newOnly = e.target.checked; keep(); });
+		box.querySelectorAll("#fReg .chip").forEach(b => b.addEventListener("click", () => {
+			const r = b.dataset.r;
+			if (!r) opts.regions = [];
+			else if (opts.regions.indexOf(r) >= 0) opts.regions.splice(opts.regions.indexOf(r), 1);
+			else opts.regions.push(r);
+			keep();
+			box.querySelectorAll("#fReg .chip").forEach(x => x.classList.toggle("on", x.dataset.r ? opts.regions.indexOf(x.dataset.r) >= 0 : !opts.regions.length));
+			loadScenery(false);
+		}));
+		box.querySelectorAll("#fScen .chip").forEach(b => b.addEventListener("click", () => {
+			opts.scenery = b.dataset.s; keep();
+			box.querySelectorAll("#fScen .chip").forEach(x => x.classList.toggle("on", x === b));
+		}));
 		$$("#fGo").addEventListener("click", () => search(false));
 		$$("#fSurprise").addEventListener("click", () => search(true));
 		fromNote();
 		if (result) drawResult();
+		if (scen) drawScenery();
+	}
+
+	/* ------------------------------------------------------------------ your scenery and deals */
+	async function loadScenery(rescan) {
+		try { scen = await get("/api/fl/scenery?regions=" + opts.regions.join(",") + (rescan ? "&rescan=1" : "")); } catch (e) { scen = null; }
+		if (view === "finder") drawScenery();
+	}
+
+	function money(v, cur) {
+		const n = Number(v) || 0;
+		try { return cur ? n.toLocaleString("en-GB", { style: "currency", currency: cur }) : n.toFixed(2); } catch (e) { return n.toFixed(2) + " " + cur; }
+	}
+
+	function drawScenery() {
+		const note = box && box.querySelector("#fScenNote"), d = box && box.querySelector("#fDeals");
+		if (!note || !d || !scen) return;
+		note.innerHTML = esc(scen.note || "Looking through your Community folder…") + ' · <a href="#" id="fRescan">Look again</a>';
+		note.querySelector("#fRescan").addEventListener("click", e => { e.preventDefault(); note.textContent = "Looking…"; loadScenery(true); setTimeout(() => loadScenery(false), 4000); });
+		const deals = scen.deals || [];
+		if (!deals.length) { d.innerHTML = scen.dealsNote ? '<p class="muted small deals-note">Scenery deals: ' + esc(scen.dealsNote) + "</p>" : ""; return; }
+		d.innerHTML = '<div class="panel deals"><h2>Airport scenery on sale now</h2><div class="deal-list">' + deals.map(x =>
+			'<a class="deal" href="#" data-url="' + esc(x.url) + '"><span class="fc-code">' + esc(x.icao) + '</span><div class="fc-name"><b>' + esc(x.title) + '</b><span class="muted">' +
+			esc(x.store) + (x.name ? " · " + FLAG(x.country) + " " + esc(x.city || x.name) : "") + (x.visited ? " · you've flown there" : "") + (x.msfs2024 ? "" : " · MSFS 2020") + "</span></div>" +
+			'<div class="price"><b>' + money(x.price, x.currency) + '</b><s class="muted">' + money(x.was, x.currency) + '</s><span class="tag sale">−' + x.pct + "%</span></div></a>").join("") +
+			'</div><p class="muted small deals-note">' + esc(scen.dealsNote || "") + " · checked once a day</p></div>";
+		d.querySelectorAll("[data-url]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); openLink(a.dataset.url); }));
+	}
+
+	function openLink(url) {
+		fetch("/api/action", { method: "POST", headers: { "Content-Type": "application/json", "X-Control-Panel": "1" }, body: JSON.stringify({ action: "openUrl", url: url }) })
+			.then(r => r.json()).then(r => { if (!r || !r.ok) window.open(url, "_blank"); }).catch(() => window.open(url, "_blank"));
 	}
 
 	function fromNote() {
@@ -92,6 +146,7 @@ const Finder = (function () {
 		if (!n) return;
 		if (opts.from === "last") n.textContent = status ? (status.last ? "Your last flight landed at " + status.last : "No landing in the logbook yet: choose Airport") : "";
 		else if (opts.from === "here") n.textContent = status ? (status.here ? "You're at " + status.here : "MSFS isn't connected, or you're not at an airport") : "";
+		else if (opts.from === "any") n.textContent = "A random airport in your regions (with Surprise me: a random flight)";
 		else n.textContent = "";
 	}
 
@@ -121,13 +176,14 @@ const Finder = (function () {
 		if (busy) return;
 		const p = plane(), t = TIMES[opts.time] || TIMES[1];
 		const from = opts.from === "code" ? opts.fromCode : opts.from;
+		const extra = "&regions=" + opts.regions.join(",") + "&scenery=" + opts.scenery;
 		const out = box.querySelector("#fOut");
 		if (!from) { out.innerHTML = '<div class="hint-box">Type an airport code, e.g. EKCH.</div>'; return; }
 		busy = true;
 		out.innerHTML = '<p class="muted">Looking…</p>';
 		try {
 			result = await get("/api/fl/find?from=" + encodeURIComponent(from) + "&min=" + t[0] + "&max=" + t[1] + "&kt=" + p[2] + "&rwy=" + p[3] + "&ovh=" + p[4] +
-				"&new=" + (opts.newOnly ? 1 : 0) + "&surprise=" + (surprise ? 1 : 0) + "&count=12");
+				"&new=" + (opts.newOnly ? 1 : 0) + "&surprise=" + (surprise ? 1 : 0) + "&count=12" + extra);
 			result.surprise = surprise;
 		} catch (e) { result = { ok: false, error: "Control Hub isn't answering." }; }
 		busy = false;
@@ -151,7 +207,7 @@ const Finder = (function () {
 			out.innerHTML = '<div class="hint-box">No real routes from ' + esc(from.icao) + " fit that time" + (opts.newOnly ? " with only new airports" : "") + ". Try another flight time" + (opts.newOnly ? ", or allow airports you've been to" : "") + ".</div>";
 			return;
 		}
-		let h = '<div class="find-head"><div><b>' + esc(from.icao) + "</b> " + esc(from.name) + ' <span class="muted">· ' + (result.surprise ? "your surprise flight" : fl.length + " of " + result.total + " routes that fit") + "</span></div>" +
+		let h = '<div class="find-head"><div><b>' + esc(from.icao) + "</b> " + esc(from.name) + (from.scenery ? ' <span class="tag mine" title="' + esc(from.scenery.title) + '">Your scenery</span>' : "") + ' <span class="muted">· ' + (result.surprise ? "your surprise flight" : fl.length + " of " + result.total + " routes that fit") + "</span></div>" +
 			(result.surprise ? "" : '<button class="btn" id="fMore">Show others</button>') + "</div>";
 		h += '<div class="grid2 finder-grid"><div class="results">' + fl.map((f, i) => card(f, i)).join("") + '</div><div><div class="map finder-map" id="fMap"></div>' +
 			'<p class="muted small">Routes from Virtual Radar Server\'s public route list (' + esc(result.routesDate || "") + "), sent in by people who track real flights. Most are flown today; a few may have stopped.</p></div></div>";
@@ -159,6 +215,7 @@ const Finder = (function () {
 		const more = out.querySelector("#fMore");
 		if (more) more.addEventListener("click", () => search(false));
 		out.querySelectorAll("[data-sb]").forEach(b => b.addEventListener("click", () => simbrief(fl[+b.dataset.sb], b.dataset.flight)));
+		out.querySelectorAll(".fc-deal").forEach(a => a.addEventListener("click", e => { e.preventDefault(); openLink(a.dataset.url); }));
 		out.querySelectorAll(".fcard").forEach(c => {
 			c.addEventListener("mouseenter", () => highlight(+c.dataset.i, true));
 			c.addEventListener("mouseleave", () => highlight(+c.dataset.i, false));
@@ -171,9 +228,12 @@ const Finder = (function () {
 		const lines = (f.airlines || []).slice(0, 3).map(a => esc(a.name)).join(", ");
 		return '<div class="fcard" data-i="' + i + '"><div class="fc-top"><span class="fc-code">' + esc(f.icao) + "</span>" +
 			'<div class="fc-name"><b>' + esc(f.name) + '</b><span class="muted">' + FLAG(f.country) + " " + esc(f.city || "") + (f.city && f.country ? ", " : "") + esc(f.country || "") + "</span></div>" +
+			(f.scenery ? '<span class="tag mine" title="' + esc(f.scenery.title) + '">Your scenery</span>' : "") +
 			(f.visited ? '<span class="tag">Been there</span>' : '<span class="tag new">New</span>') + "</div>" +
 			'<div class="fc-facts num"><span><em>Distance</em>' + fmtInt(f.distNm) + ' nm</span><span><em>About</em>' + dur(f.estMin) + "</span><span><em>Runway</em>" + (f.rwyFt ? fmtInt(f.rwyFt) + " ft" : "–") + "</span></div>" +
 			(lines ? '<div class="fc-air muted">Flown by ' + lines + ((f.airlines || []).length > 3 ? " and more" : "") + "</div>" : "") +
+			(f.deal ? '<a class="fc-deal" href="#" data-url="' + esc(f.deal.url) + '"><span class="tag sale">On sale −' + f.deal.pct + "%</span> " + esc(f.deal.title) + " · <b>" + money(f.deal.price, f.deal.currency) +
+				'</b> <s class="muted">' + money(f.deal.was, f.deal.currency) + "</s> at " + esc(f.deal.store) + "</a>" : "") +
 			'<div class="fc-btns">' + flights.map(c => '<button class="chip" data-sb="' + i + '" data-flight="' + esc(c) + '" title="Plan this flight in SimBrief">' + esc(c) + "</button>").join("") +
 			'<button class="btn accent" data-sb="' + i + '" data-flight="' + esc(flights[0] || "") + '">Send to SimBrief</button></div></div>';
 	}
@@ -184,8 +244,7 @@ const Finder = (function () {
 		let url = "https://dispatch.simbrief.com/options/custom?orig=" + from + "&dest=" + f.icao + "&type=" + p[0];
 		const m = /^([A-Z]{3})(\d+[A-Z]?)$/.exec(callsign || "");
 		if (m) url += "&airline=" + m[1] + "&fltnum=" + m[2];
-		fetch("/api/action", { method: "POST", headers: { "Content-Type": "application/json", "X-Control-Panel": "1" }, body: JSON.stringify({ action: "openUrl", url: url }) })
-			.then(r => r.json()).then(r => { if (!r || !r.ok) window.open(url, "_blank"); }).catch(() => window.open(url, "_blank"));
+		openLink(url);
 	}
 
 	/* ------------------------------------------------------------------ the map */

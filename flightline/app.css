@@ -337,3 +337,19 @@ select { background: var(--win); color: var(--text); border: 1px solid var(--lin
 .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--acc); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; margin-right: 6px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 1100px) { .finder-form { grid-template-columns: 1fr; } .finder-form .big-chk, .finder-form .find-btns { grid-column: auto; } .finder-map { height: 360px; position: static; } }
+.finder-form .field.wide { grid-column: 1 / 3; }
+.tag.mine { color: #c4b5fd; background: rgba(167, 139, 250, 0.16); margin-right: 6px; }
+.tag.sale { color: var(--warn); background: rgba(245, 185, 66, 0.14); margin-left: 0; }
+.fc-deal { display: block; font-size: 12.5px; color: var(--sub); text-decoration: none; margin: -2px 0 8px; }
+.fc-deal:hover { color: var(--text); }
+.fc-deal s, .price s { margin-left: 4px; }
+.deals { margin-top: 18px; }
+.deal-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 0 18px; padding: 0 18px 4px; }
+.deal { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-top: 1px solid rgba(36, 48, 68, 0.6); color: inherit; text-decoration: none; }
+.deal:hover b { color: var(--acc); }
+.deal .fc-code { font-size: 17px; min-width: 52px; }
+.deal .fc-name span { font-size: 12px; }
+.price { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.price .tag { margin-left: 6px; }
+.deals-note { padding: 0 18px 12px; margin: 6px 0 0; }
+#fScenNote a { color: var(--acc); }

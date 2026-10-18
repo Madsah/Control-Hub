@@ -1,13 +1,12 @@
 {
-  "version": "1.7.0",
-  "service": "3.6.0",
+  "version": "1.8.0",
+  "service": "3.7.0",
   "hub": "1.6.0",
   "widget": "5.2.3",
   "date": "2026-10-18",
   "notes": [
-    "FlightLine: Find a flight. Real airline routes (flights that have actually been flown) that fit your plane and how long you want to fly.",
-    "From your last landing, where you are in MSFS, or any airport. Only new airports if you like, or Surprise me.",
-    "Send to SimBrief opens SimBrief with departure, destination, aircraft and flight number filled in.",
-    "The first time, Control Hub downloads the route list (a minute or two); after that it's refreshed once a month."
+    "Find a flight: choose regions (Europe and Middle East to start with, or anywhere), and \"Anywhere in my regions\" as departure.",
+    "Your add-on scenery is found in the Community folder by itself: flights are marked \"Your scenery\", and you can put them first or show only those.",
+    "Airport scenery on sale at iniBuilds and Contrail is checked once a day: shown on the flights it fits, and as a list of the best deals in your regions."
   ]
 }

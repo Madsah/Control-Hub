@@ -206,7 +206,46 @@ namespace ControlPanelHelper
         /// Real routes from an airport that fit a flight time. kt = cruise speed, overhead = minutes for taxi, climb and descent,
         /// minRwyFt = the shortest runway the plane needs. Airports you've been to are marked (and left out with newOnly).
         /// </summary>
-        public static Dictionary<string, object> Find(string from, int minMin, int maxMin, int kt, int overhead, int minRwyFt, bool newOnly, bool surprise, int count)
+        public class Search
+        {
+            public string From = "";
+            public int MinMin = 60, MaxMin = 120, Kt = 450, Overhead = 25, MinRwyFt = 0, Count = 12;
+            public bool NewOnly, Surprise;
+            public HashSet<string> Regions;        // null or empty = anywhere
+            public string Scenery = "any";        // "any", "prefer" or "only" (destination has your scenery)
+        }
+
+        // ------------------------------------------------------------------ regions
+
+        static readonly HashSet<string> EU = new HashSet<string>("AL AD AM AT AZ BY BE BA BG HR CY CZ DK EE FO FI FR GE DE GI GR GL HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH TR UA GB VA IM JE GG AX SJ".Split(' '));
+        static readonly HashSet<string> ME = new HashSet<string>("AE SA QA BH KW OM JO IL PS LB IQ IR SY YE".Split(' '));
+        static readonly HashSet<string> NAF = new HashSet<string>("MA DZ TN LY EG EH".Split(' '));
+
+        /// <summary>EU (Europe), ME (Middle East), NAF (North Africa), AF (rest of Africa), AS (Asia), NA (North and Central America), SA (South America), OC (Oceania).</summary>
+        public static string Region(string country, double lat, double lon)
+        {
+            string c = (country ?? "").ToUpperInvariant();
+            if (EU.Contains(c)) return "EU";
+            if (ME.Contains(c)) return "ME";
+            if (NAF.Contains(c)) return "NAF";
+            if (lon <= -30) return lat >= 8 ? "NA" : "SA";
+            if (lon >= 110 && lat <= -10 || lon >= 160) return "OC";
+            if (lon >= 25 && lat >= -12) return "AS";
+            return "AF";
+        }
+
+        static bool InRegions(Airport a, HashSet<string> regions)
+        {
+            return regions == null || regions.Count == 0 || regions.Contains(Region(a.Country, a.Lat, a.Lon));
+        }
+
+        // ------------------------------------------------------------------ searching
+
+        /// <summary>
+        /// Real routes that fit a flight time, from an airport (or from anywhere in your regions). Destinations are kept to your regions,
+        /// need a long enough runway, and are marked with your scenery and scenery on sale.
+        /// </summary>
+        public static Dictionary<string, object> Find(Search q)
         {
             var res = new Dictionary<string, object>();
             res["ok"] = true;
@@ -226,68 +265,190 @@ namespace ControlPanelHelper
                 drop.Change(600000, Timeout.Infinite);
                 apts = airports; lines = airlines; rts = routes;
             }
-            from = (from ?? "").Trim().ToUpperInvariant();
-            Airport origin;
-            if (!apts.TryGetValue(from, out origin))
-            {
-                res["ok"] = false;
-                res["error"] = from.Length == 0 ? "Choose where to fly from." : "No real airline routes from " + from + ".";
-                // Airports nearby that do have routes.
-                var pos = from.Length > 0 ? Runways.Position(from) : null;
-                if (pos != null) res["nearby"] = Nearby(apts, rts, pos[0], pos[1], 6);
-                return res;
-            }
-            res["from"] = AirportInfo(origin, null);
-            kt = Math.Max(60, Math.Min(600, kt));
-            overhead = Math.Max(0, Math.Min(60, overhead));
-            double minNm = Math.Max(0, (minMin - overhead) * kt / 60.0), maxNm = Math.Max(minNm + 20, (maxMin - overhead) * kt / 60.0);
+            int kt = Math.Max(60, Math.Min(600, q.Kt)), overhead = Math.Max(0, Math.Min(60, q.Overhead));
+            double minNm = Math.Max(0, (q.MinMin - overhead) * kt / 60.0), maxNm = Math.Max(minNm + 20, (q.MaxMin - overhead) * kt / 60.0);
             var visited = Visited();
             var lengths = Runways.MaxLengths();
-            var hits = new List<Dictionary<string, object>>();
-            List<Route> list;
-            if (rts.TryGetValue(from, out list))
-                foreach (var r in list)
-                {
-                    Airport dest;
-                    if (!apts.TryGetValue(r.To, out dest)) continue;
-                    double nm = FlightRec.Nm(origin.Lat, origin.Lon, dest.Lat, dest.Lon);
-                    if (nm < minNm || nm > maxNm) continue;
-                    double rwy;
-                    bool knownRwy = lengths != null && lengths.TryGetValue(dest.Icao, out rwy);
-                    if (!knownRwy) rwy = 0;
-                    if (knownRwy && rwy < minRwyFt) continue;
-                    bool been = visited.Contains(dest.Icao);
-                    if (newOnly && been) continue;
-                    var d = AirportInfo(dest, lines);
-                    d["distNm"] = Math.Round(nm);
-                    d["estMin"] = (int)Math.Round(overhead + nm / kt * 60);
-                    d["rwyFt"] = knownRwy ? Math.Round(rwy) : 0;
-                    d["visited"] = been;
-                    var al = new List<Dictionary<string, object>>();
-                    foreach (var code in r.Airlines)
-                    {
-                        var x = new Dictionary<string, object>();
-                        x["code"] = code;
-                        string name;
-                        x["name"] = lines.TryGetValue(code, out name) ? name : code;
-                        al.Add(x);
-                    }
-                    d["airlines"] = al;
-                    d["flights"] = r.Flights;
-                    hits.Add(d);
-                }
-            res["total"] = hits.Count;
-            // A different mix each time, new airports first.
+            var mine = Scenery.InstalledAirports();
+            var deals = DealsByAirport();
             var rnd = new Random();
+
+            string from = (q.From ?? "").Trim().ToUpperInvariant();
+            Airport origin = null;
+            List<Dictionary<string, object>> hits = null;
+            if (from == "ANY")
+            {
+                // A random airport in your regions with routes that fit (tries up to 40 airports).
+                var pool = new List<string>();
+                foreach (var kv in rts)
+                {
+                    Airport a;
+                    if (kv.Value.Count >= 4 && apts.TryGetValue(kv.Key, out a) && InRegions(a, q.Regions) && Long(lengths, a.Icao, q.MinRwyFt)) pool.Add(kv.Key);
+                }
+                for (int tries = 0; tries < 40 && pool.Count > 0; tries++)
+                {
+                    int i = rnd.Next(pool.Count);
+                    var a = apts[pool[i]];
+                    pool.RemoveAt(i);
+                    var h = Hits(a, rts, apts, lines, q, minNm, maxNm, kt, overhead, visited, lengths, mine, deals);
+                    if (h.Count > 0) { origin = a; hits = h; break; }
+                }
+                if (origin == null)
+                {
+                    res["ok"] = false;
+                    res["error"] = "No airport in your regions has real routes that fit. Try another flight time or more regions.";
+                    return res;
+                }
+            }
+            else
+            {
+                if (!apts.TryGetValue(from, out origin))
+                {
+                    res["ok"] = false;
+                    res["error"] = from.Length == 0 ? "Choose where to fly from." : "No real airline routes from " + from + ".";
+                    // Airports nearby that do have routes.
+                    var pos = from.Length > 0 ? Runways.Position(from) : null;
+                    if (pos != null) res["nearby"] = Nearby(apts, rts, pos[0], pos[1], 6);
+                    return res;
+                }
+                hits = Hits(origin, rts, apts, lines, q, minNm, maxNm, kt, overhead, visited, lengths, mine, deals);
+            }
+            var fromInfo = AirportInfo(origin, null);
+            AddScenery(fromInfo, origin.Icao, mine, deals);
+            res["from"] = fromInfo;
+            res["total"] = hits.Count;
+            // A different mix each time: your scenery first if you like, then airports you haven't been to.
             var keyed = new List<KeyValuePair<double, Dictionary<string, object>>>();
-            foreach (var h in hits) keyed.Add(new KeyValuePair<double, Dictionary<string, object>>(rnd.NextDouble() + ((bool)h["visited"] ? 1 : 0), h));
+            foreach (var h in hits)
+            {
+                double k = rnd.NextDouble() + ((bool)h["visited"] ? 1 : 0);
+                if (q.Scenery == "prefer" && h.ContainsKey("scenery")) k -= 2;
+                keyed.Add(new KeyValuePair<double, Dictionary<string, object>>(k, h));
+            }
             keyed.Sort((p1, p2) => p1.Key.CompareTo(p2.Key));
             var outList = new List<Dictionary<string, object>>();
-            int max = surprise ? 1 : Math.Max(1, Math.Min(40, count));
+            int max = q.Surprise ? 1 : Math.Max(1, Math.Min(40, q.Count));
             foreach (var k in keyed) { if (outList.Count >= max) break; outList.Add(k.Value); }
             res["flights"] = outList;
             res["routesDate"] = IndexDate.ToString("yyyy-MM-dd", Inv);
             return res;
+        }
+
+        static bool Long(Dictionary<string, double> lengths, string icao, int minRwyFt)
+        {
+            double rwy;
+            return lengths == null || !lengths.TryGetValue(icao, out rwy) || rwy >= minRwyFt;
+        }
+
+        static List<Dictionary<string, object>> Hits(Airport origin, Dictionary<string, List<Route>> rts, Dictionary<string, Airport> apts, Dictionary<string, string> lines,
+            Search q, double minNm, double maxNm, int kt, int overhead, HashSet<string> visited, Dictionary<string, double> lengths,
+            Dictionary<string, Scenery.Installed> mine, Dictionary<string, List<Scenery.Deal>> deals)
+        {
+            var hits = new List<Dictionary<string, object>>();
+            List<Route> list;
+            if (!rts.TryGetValue(origin.Icao, out list)) return hits;
+            foreach (var r in list)
+            {
+                Airport dest;
+                if (!apts.TryGetValue(r.To, out dest)) continue;
+                if (!InRegions(dest, q.Regions)) continue;
+                double nm = FlightRec.Nm(origin.Lat, origin.Lon, dest.Lat, dest.Lon);
+                if (nm < minNm || nm > maxNm) continue;
+                double rwy;
+                bool knownRwy = lengths != null && lengths.TryGetValue(dest.Icao, out rwy);
+                if (!knownRwy) rwy = 0;
+                if (knownRwy && rwy < q.MinRwyFt) continue;
+                bool been = visited.Contains(dest.Icao);
+                if (q.NewOnly && been) continue;
+                if (q.Scenery == "only" && !mine.ContainsKey(dest.Icao)) continue;
+                var d = AirportInfo(dest, lines);
+                d["distNm"] = Math.Round(nm);
+                d["estMin"] = (int)Math.Round(overhead + nm / kt * 60);
+                d["rwyFt"] = knownRwy ? Math.Round(rwy) : 0;
+                d["visited"] = been;
+                AddScenery(d, dest.Icao, mine, deals);
+                var al = new List<Dictionary<string, object>>();
+                foreach (var code in r.Airlines)
+                {
+                    var x = new Dictionary<string, object>();
+                    x["code"] = code;
+                    string name;
+                    x["name"] = lines.TryGetValue(code, out name) ? name : code;
+                    al.Add(x);
+                }
+                d["airlines"] = al;
+                d["flights"] = r.Flights;
+                hits.Add(d);
+            }
+            return hits;
+        }
+
+        /// <summary>Your scenery for an airport, or else the best scenery deal for it (MSFS 2024 first, then the biggest discount).</summary>
+        static void AddScenery(Dictionary<string, object> d, string icao, Dictionary<string, Scenery.Installed> mine, Dictionary<string, List<Scenery.Deal>> deals)
+        {
+            Scenery.Installed s;
+            if (mine.TryGetValue(icao, out s))
+            {
+                var e = new Dictionary<string, object>();
+                e["title"] = s.Title; e["creator"] = s.Creator;
+                d["scenery"] = e;
+                return;
+            }
+            List<Scenery.Deal> list;
+            if (deals.TryGetValue(icao, out list) && list.Count > 0) d["deal"] = DealInfo(list[0]);
+        }
+
+        public static Dictionary<string, object> DealInfo(Scenery.Deal x)
+        {
+            var e = new Dictionary<string, object>();
+            e["icao"] = x.Icao; e["store"] = x.Store; e["title"] = x.Title; e["url"] = x.Url; e["currency"] = x.Currency;
+            e["price"] = x.Price; e["was"] = x.Was; e["msfs2024"] = x.Msfs2024;
+            e["pct"] = x.Was > 0 ? Math.Round((1 - x.Price / x.Was) * 100) : 0;
+            return e;
+        }
+
+        static Dictionary<string, List<Scenery.Deal>> DealsByAirport()
+        {
+            var map = new Dictionary<string, List<Scenery.Deal>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var x in Scenery.Deals())
+            {
+                List<Scenery.Deal> l;
+                if (!map.TryGetValue(x.Icao, out l)) map[x.Icao] = l = new List<Scenery.Deal>();
+                l.Add(x);
+            }
+            foreach (var l in map.Values)
+                l.Sort((a, b) => a.Msfs2024 != b.Msfs2024 ? (a.Msfs2024 ? -1 : 1) : (b.Was - b.Price).CompareTo(a.Was - a.Price));
+            return map;
+        }
+
+        /// <summary>Airport scenery on sale now, in your regions (airports you have scenery for left out), biggest discount first.</summary>
+        public static List<Dictionary<string, object>> DealList(HashSet<string> regions, int max)
+        {
+            Dictionary<string, Airport> apts;
+            lock (Gate)
+            {
+                Load();
+                apts = airports ?? new Dictionary<string, Airport>();
+                if (airports != null) drop.Change(600000, Timeout.Infinite);
+            }
+            var mine = Scenery.InstalledAirports();
+            var visited = Visited();
+            var best = new Dictionary<string, Scenery.Deal>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in DealsByAirport()) if (!mine.ContainsKey(kv.Key)) best[kv.Key] = kv.Value[0];
+            var list = new List<Dictionary<string, object>>();
+            foreach (var x in best.Values)
+            {
+                Airport a;
+                bool knownApt = apts.TryGetValue(x.Icao, out a);
+                if (regions != null && regions.Count > 0 && (!knownApt || !InRegions(a, regions))) continue;
+                var e = DealInfo(x);
+                if (knownApt) { e["name"] = a.Name; e["city"] = a.City; e["country"] = a.Country; }
+                e["visited"] = visited.Contains(x.Icao);
+                list.Add(e);
+            }
+            list.Sort((p1, p2) => Convert.ToDouble(p2["pct"]).CompareTo(Convert.ToDouble(p1["pct"])));
+            if (list.Count > max) list.RemoveRange(max, list.Count - max);
+            return list;
         }
 
         static Dictionary<string, object> AirportInfo(Airport a, Dictionary<string, string> lines)

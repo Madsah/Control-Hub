@@ -271,17 +271,42 @@ namespace ControlPanelHelper
                 }
                 if (req.Method == "GET" && req.Path == "/api/fl/find")
                 {
-                    int mn, mx, kt, ovh, rwy, cnt;
-                    int.TryParse(req.Param("min") ?? "45", out mn);
-                    int.TryParse(req.Param("max") ?? "120", out mx);
-                    int.TryParse(req.Param("kt") ?? "450", out kt);
-                    int.TryParse(req.Param("ovh") ?? "25", out ovh);
-                    int.TryParse(req.Param("rwy") ?? "0", out rwy);
-                    if (!int.TryParse(req.Param("count") ?? "12", out cnt)) cnt = 12;
-                    string from = RouteData.ResolveFrom(req.Param("from"));
-                    var found = RouteData.Find(from, mn, mx, kt, ovh, rwy, req.Param("new") == "1", req.Param("surprise") == "1", cnt);
-                    found["resolvedFrom"] = from;
+                    var q = new RouteData.Search();
+                    int.TryParse(req.Param("min") ?? "60", out q.MinMin);
+                    int.TryParse(req.Param("max") ?? "120", out q.MaxMin);
+                    int.TryParse(req.Param("kt") ?? "450", out q.Kt);
+                    int.TryParse(req.Param("ovh") ?? "25", out q.Overhead);
+                    int.TryParse(req.Param("rwy") ?? "0", out q.MinRwyFt);
+                    if (!int.TryParse(req.Param("count") ?? "12", out q.Count)) q.Count = 12;
+                    q.NewOnly = req.Param("new") == "1";
+                    q.Surprise = req.Param("surprise") == "1";
+                    q.Regions = Regions(req.Param("regions"));
+                    string sc = req.Param("scenery");
+                    q.Scenery = sc == "prefer" || sc == "only" ? sc : "any";
+                    string from = req.Param("from") ?? "";
+                    q.From = from.Equals("any", StringComparison.OrdinalIgnoreCase) ? "ANY" : RouteData.ResolveFrom(from);
+                    var found = RouteData.Find(q);
+                    found["resolvedFrom"] = q.From;
                     SendJson(stream, 200, found, allow);
+                    return;
+                }
+                if (req.Method == "GET" && req.Path == "/api/fl/scenery")
+                {
+                    if (req.Param("rescan") == "1") ThreadPool.QueueUserWorkItem(delegate { Scenery.Scan(true); });
+                    var mine = Scenery.InstalledAirports();
+                    var inst = new List<Dictionary<string, object>>();
+                    foreach (var i in mine.Values)
+                    {
+                        var e = new Dictionary<string, object>();
+                        e["icao"] = i.Icao; e["title"] = i.Title; e["creator"] = i.Creator;
+                        inst.Add(e);
+                    }
+                    fl["ok"] = true;
+                    fl["installed"] = inst;
+                    fl["note"] = Scenery.ScanNote;
+                    fl["deals"] = RouteData.DealList(Regions(req.Param("regions")), 12);
+                    fl["dealsNote"] = Scenery.DealsNote;
+                    SendJson(stream, 200, fl, allow);
                     return;
                 }
                 if (req.Method == "GET" && req.Path == "/api/fl/routes")
@@ -779,6 +804,18 @@ namespace ControlPanelHelper
         static string Str(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) && v != null ? Convert.ToString(v) : null; }
         static int Int(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) && v != null ? Convert.ToInt32(Convert.ToDouble(v)) : 0; }
         static bool Bool(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) && v is bool && (bool)v; }
+
+        /// <summary>"EU,ME" → the regions for the flight finder (empty = anywhere).</summary>
+        static HashSet<string> Regions(string list)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var r in (list ?? "").Split(','))
+            {
+                string t = r.Trim().ToUpperInvariant();
+                if (t == "EU" || t == "ME" || t == "NAF" || t == "AF" || t == "AS" || t == "NA" || t == "SA" || t == "OC") set.Add(t);
+            }
+            return set;
+        }
 
         static bool Act(Dictionary<string, object> b)
         {
