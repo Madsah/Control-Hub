@@ -224,7 +224,7 @@ namespace ControlHub
         void AddProjectRows(Stack s, bool full)
         {
             // FlightLine: part of Control Hub (its flights are recorded by Control Hub Service).
-            var fl = s.Put(new Row(Glyph.Airplane, "FlightLine", "Your flight logbook: every MSFS flight is recorded by itself"));
+            var fl = s.Put(new Row(Glyph.Airplane, "FlightLine", "Your flight logbook, and Start session for your flight programs"));
             fl.Add(Btn("Open", true, delegate
             {
                 ThreadPool.QueueUserWorkItem(delegate
@@ -232,6 +232,10 @@ namespace ControlHub
                     if (!HubApp.OpenFlightLine())
                         try { BeginInvoke((MethodInvoker)delegate { Dlg.Info(this, "FlightLine couldn't open", "Control Hub Service isn't answering. Restart it on the Overview, then try again."); }); } catch { }
                 });
+            }));
+            fl.Add(Btn("Start session", false, delegate
+            {
+                ThreadPool.QueueUserWorkItem(delegate { HubApi.Run("flightSessionStart"); });
             }));
             if (full)
             {

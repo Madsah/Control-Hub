@@ -915,27 +915,61 @@ namespace ControlPanelHelper
             return list;
         }
 
+        // Runway ends (airport, lat1, lon1, lat2, lon2), read from runways.csv once and kept, for Nearest.
+        static List<string> endsApt;
+        static List<double[]> endsPos;
+        static DateTime endsAt = DateTime.MinValue;
+        // Let go of the list 5 minutes after the last lookup (a few MB that are only needed around a flight's start and end).
+        static readonly Timer endsDrop = new Timer(delegate { lock (Gate) { endsApt = null; endsPos = null; } }, null, Timeout.Infinite, Timeout.Infinite);
+
+        static void LoadEnds()
+        {
+            if (endsPos != null && File.Exists(FilePath) && File.GetLastWriteTimeUtc(FilePath) <= endsAt) return;
+            if (!Ensure()) return;
+            var apts = new List<string>(50000);
+            var pos = new List<double[]>(50000);
+            foreach (var line in File.ReadLines(FilePath))
+            {
+                var f = Freqs.SplitCsv(line);
+                if (f.Count < 17 || f[7] == "1") continue;
+                double la1 = D(f[9]), lo1 = D(f[10]), la2 = D(f[15]), lo2 = D(f[16]);
+                if (double.IsNaN(la1) || double.IsNaN(lo1)) continue;
+                if (double.IsNaN(la2) || double.IsNaN(lo2)) { la2 = la1; lo2 = lo1; }
+                apts.Add(f[2].ToUpperInvariant());
+                pos.Add(new[] { la1, lo1, la2, lo2 });
+            }
+            endsApt = apts;
+            endsPos = pos;
+            endsAt = File.GetLastWriteTimeUtc(FilePath);
+        }
+
         /// <summary>The airport with a runway nearest to a spot (within maxMeters), e.g. where a flight started. Null if none.</summary>
         public static string Nearest(double lat, double lon, double maxMeters)
         {
             try
             {
-                lock (Gate) { if (!Ensure()) return null; }
+                List<string> apts;
+                List<double[]> pos;
+                lock (Gate)
+                {
+                    LoadEnds();
+                    endsDrop.Change(300000, Timeout.Infinite);
+                    apts = endsApt;
+                    pos = endsPos;
+                }
+                if (pos == null) return null;
                 string best = null;
                 double bestD = maxMeters;
                 double mPerLat = 111320, mPerLon = 111320 * Math.Cos(lat * Math.PI / 180);
-                foreach (var line in File.ReadLines(FilePath))
+                for (int i = 0; i < pos.Count; i++)
                 {
-                    var f = Freqs.SplitCsv(line);
-                    if (f.Count < 17 || f[7] == "1") continue;
-                    double la1 = D(f[9]), lo1 = D(f[10]), la2 = D(f[15]), lo2 = D(f[16]);
-                    if (double.IsNaN(la1) || double.IsNaN(lo1) || Math.Abs(la1 - lat) > 0.1 || Math.Abs(lo1 - lon) > 0.2) continue;
-                    if (double.IsNaN(la2) || double.IsNaN(lo2)) { la2 = la1; lo2 = lo1; }
+                    var r = pos[i];
+                    if (Math.Abs(r[0] - lat) > 0.1 || Math.Abs(r[1] - lon) > 0.2) continue;
                     // Distance to the runway (as a line between its two ends).
-                    double bx = (lo2 - lo1) * mPerLon, by = (la2 - la1) * mPerLat, px = (lon - lo1) * mPerLon, py = (lat - la1) * mPerLat;
+                    double bx = (r[3] - r[1]) * mPerLon, by = (r[2] - r[0]) * mPerLat, px = (lon - r[1]) * mPerLon, py = (lat - r[0]) * mPerLat;
                     double len2 = bx * bx + by * by, t = len2 > 0 ? Math.Max(0, Math.Min(1, (px * bx + py * by) / len2)) : 0;
                     double dx = px - t * bx, dy = py - t * by, d = Math.Sqrt(dx * dx + dy * dy);
-                    if (d < bestD) { bestD = d; best = f[2].ToUpperInvariant(); }
+                    if (d < bestD) { bestD = d; best = apts[i]; }
                 }
                 return best;
             }

@@ -258,6 +258,39 @@ namespace ControlPanelHelper
                     SendJson(stream, 200, fl, allow);
                     return;
                 }
+                if (req.Method == "GET" && req.Path == "/api/fl/session")
+                {
+                    var cfg = FlightSession.Config();
+                    fl["ok"] = true;
+                    fl["suggested"] = cfg == null;
+                    fl["config"] = cfg ?? FlightSession.Suggest();
+                    fl["state"] = FlightSession.State();
+                    fl["pages"] = FlightSession.PanelPages();
+                    SendJson(stream, 200, fl, allow);
+                    return;
+                }
+                if (req.Method == "GET" && req.Path == "/api/fl/steam")
+                {
+                    fl["ok"] = true;
+                    fl["games"] = Steam.Games();
+                    SendJson(stream, 200, fl, allow);
+                    return;
+                }
+                if (req.Method == "POST" && req.Path == "/api/fl/session")
+                {
+                    if (req.Header("X-Control-Panel") != "1") { SendJson(stream, 403, Err("missing header"), allow); return; }
+                    Dictionary<string, object> body = null;
+                    try { body = ParseJson(req.Body ?? "{}"); } catch { }
+                    string what = body != null ? Str(body, "what") : null;
+                    object cfgO;
+                    bool ok = what == "start" ? FlightSession.Start()
+                        : what == "end" ? FlightSession.End()
+                        : what == "save" && body.TryGetValue("config", out cfgO) && FlightSession.Save(cfgO as Dictionary<string, object>);
+                    fl["ok"] = ok;
+                    fl["state"] = FlightSession.State();
+                    SendJson(stream, 200, fl, allow);
+                    return;
+                }
                 if (req.Method == "POST" && req.Path == "/api/fl/delete")
                 {
                     if (req.Header("X-Control-Panel") != "1") { SendJson(stream, 403, Err("missing header"), allow); return; }
@@ -302,6 +335,7 @@ namespace ControlPanelHelper
                     if (what == "restore") ok = Hub.RequestRestore(Str(body, "name"));
                     else if (what == "forget") ok = Hub.Forget(Str(body, "service"));
                     else if (what == "openFlightLine") ok = FlightLineApp.Open();
+                    else if (what == "flightSessionStart") ok = FlightSession.Start();
                     else if (what == "backupSettings")
                     {
                         object auto;
@@ -346,6 +380,8 @@ namespace ControlPanelHelper
                 if (wantCs2) res["cs2"] = Cs2.State();
                 var restore = Hub.TakeRestore();
                 if (restore != null) res["restore"] = restore;
+                var showPage = FlightSession.TakePage();
+                if (showPage != null) res["showPage"] = showPage;
                 SendJson(stream, 200, res, allow);
                 return;
             }
@@ -737,6 +773,8 @@ namespace ControlPanelHelper
                 case "keepAwake": KeepAwake.Set(Bool(b, "value")); return true;
                 case "gameFocus": GameFocus.Set(Bool(b, "value")); return true;
                 case "openFlightLine": return FlightLineApp.Open();
+                case "flightSessionStart": return FlightSession.Start();
+                case "flightSessionEnd": return FlightSession.End();
                 case "speedTest": return SpeedTest.Start();
                 case "closeApp": return TopApps.Close(Str(b, "exe"), Bool(b, "force"));
                 case "brightness": return Brightness.Set(Int(b, "monitor"), Int(b, "value"));

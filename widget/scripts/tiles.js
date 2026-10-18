@@ -19,6 +19,8 @@ var T = (function () {
 		powerpanel: { name: "Power (pop-out)", icon: "power", popout: "power" },
 		soundsettings: { name: "Sound settings", icon: "speaker", uri: "ms-settings:sound", sends: "sound" },
 		flightline: { name: "FlightLine", icon: "plane", act: "openFlightLine" },
+		flsession: { name: "Start flight session", icon: "plane", act: "flightSessionStart" },
+		flsessionend: { name: "End flight session", icon: "out", act: "flightSessionEnd" },
 		lock: { name: "Lock PC", icon: "lock" },
 		nightlight: { name: "Night light settings", icon: "moon", uri: "ms-settings:nightlight" },
 		display: { name: "Display settings", icon: "desktop", uri: "ms-settings:display" },

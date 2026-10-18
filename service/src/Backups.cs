@@ -66,6 +66,22 @@ namespace ControlPanelHelper
             }
         }
 
+        /// <summary>The panel's newest layout (a JSON string), or null.</summary>
+        public static string LiveLayout()
+        {
+            lock (Gate)
+            {
+                try
+                {
+                    if (!File.Exists(LiveFile)) return null;
+                    var d = Server.ParseJson(File.ReadAllText(LiveFile, Encoding.UTF8));
+                    object l;
+                    return d != null && d.TryGetValue("layout", out l) ? l as string : null;
+                }
+                catch { return null; }
+            }
+        }
+
         public static List<Dictionary<string, object>> List()
         {
             var outList = new List<Dictionary<string, object>>();

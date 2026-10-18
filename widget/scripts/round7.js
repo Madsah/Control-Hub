@@ -53,6 +53,13 @@ var Round7 = (function () {
 			if (typeof r.dnd === "boolean" && !(Helper._busyUntil.dnd > Date.now()) && Helper.state.dnd !== r.dnd) { Helper.state.dnd = r.dnd; App.dirty(); }
 			if (Array.isArray(r.running)) Pages.onRunning(r.running);
 			if (r.restore && typeof Round11 !== "undefined") Round11.restoreFromHub(r.restore);
+			// FlightLine's Start / End session asks for a page (by id, or by name).
+			if (r.showPage && !App.editing) {
+				var L = Editor.layout();
+				for (var pi = 0; pi < L.pages.length; pi++) {
+					if (L.pages[pi].id === r.showPage || L.pages[pi].name === r.showPage) { if (L.current !== pi) Editor.goPage(pi, "user"); break; }
+				}
+			}
 			if (r.cs2) {
 				live.cs2 = r.cs2;
 				live.cs2At = Date.now();

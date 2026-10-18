@@ -84,6 +84,7 @@ function go(v, id) {
 function render() {
 	if (view === "stats") return renderStats();
 	if (view === "live") return renderLive();
+	if (view === "session") return Session.render(main);
 	if (view === "flight") return renderFlight(openId);
 	renderLogbook();
 }
@@ -437,6 +438,7 @@ async function poll() {
 	// A flight just ended: it's in the logbook now.
 	if (lastRecording === true && !rec) { setTimeout(async () => { await loadLogbook(); if (view === "logbook" || view === "stats") render(); }, 2500); }
 	lastRecording = rec;
+	if (view === "session") Session.tick();
 	if (view === "live") { if (!rec || !$("#liveCards")) render(); else updateLive(); }
 	else if (view === "logbook") {
 		const b = $("#liveBtn");
