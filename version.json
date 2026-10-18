@@ -1,11 +1,11 @@
 {
-  "version": "1.8.1",
-  "service": "3.7.1",
+  "version": "1.8.2",
+  "service": "3.7.2",
   "hub": "1.6.0",
   "widget": "5.2.3",
   "date": "2026-10-18",
   "notes": [
-    "Fixes the 1.8.0 update not building (two parts had the same name).",
+    "Fixes the 1.8.0 and 1.8.1 updates not building.",
     "Find a flight: regions (Europe and Middle East to start with, or anywhere), and \"Anywhere in my regions\" as departure.",
     "Your add-on scenery is found by itself: flights are marked \"Your scenery\", and you can put them first or show only those.",
     "Airport scenery on sale at iniBuilds and Contrail is checked once a day and shown on the flights it fits, plus a list of the best deals."

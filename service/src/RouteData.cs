@@ -354,9 +354,8 @@ namespace ControlPanelHelper
                 if (!InRegions(dest, q.Regions)) continue;
                 double nm = FlightRec.Nm(origin.Lat, origin.Lon, dest.Lat, dest.Lon);
                 if (nm < minNm || nm > maxNm) continue;
-                double rwy;
+                double rwy = 0;
                 bool knownRwy = lengths != null && lengths.TryGetValue(dest.Icao, out rwy);
-                if (!knownRwy) rwy = 0;
                 if (knownRwy && rwy < q.MinRwyFt) continue;
                 bool been = visited.Contains(dest.Icao);
                 if (q.NewOnly && been) continue;
