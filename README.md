@@ -71,6 +71,14 @@ To publish a new version, change the code, raise `version` in `version.json`, ad
 
 Projects can be installed through the same updates: see `projects/README.md`.
 
+### The panel updates through Control Hub too
+
+The widget in iCUE is only a small **starter** (`widget/index.html`, `widget/manifest.json`, `widget/scripts/boot.js`). When it starts, it asks Control Hub Service which version of the panel it has (`/widget-version`). If that's the same or newer than the copy built into the widget, it loads the panel's layout, styles and scripts from Control Hub (`/widget/...`). If Control Hub isn't running, is older, or a file fails to load, it uses its built-in copy.
+
+- **A normal panel update:** change the scripts or styles and raise `version` in `widget/files.js`. Don't touch the three starter files. The installer then copies the panel code to Control Hub, and iCUE isn't involved.
+- **A starter change** (iCUE settings in `index.html`, permissions in `manifest.json`, or `boot.js`): the installer notices that those files changed and opens the widget in iCUE once, so you can accept it. Raise `manifest.json`'s version as well.
+- **New script or style files:** add them to the lists in `widget/files.js`.
+
 ## Coming next
 
-- Testing whether the widget can load its code from Control Hub Service, so panel updates need no click in iCUE.
+- A new look for the Control Hub window.

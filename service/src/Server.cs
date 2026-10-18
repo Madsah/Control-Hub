@@ -206,6 +206,17 @@ namespace ControlPanelHelper
                 return;
             }
 
+            // The panel's code for the widget's starter (see Hub.WidgetFile).
+            if (req.Method == "GET" && req.Path == "/widget-version") { SendJson(stream, 200, Hub.WidgetVersion(), allow); return; }
+            if (req.Method == "GET" && req.Path.StartsWith("/widget/"))
+            {
+                byte[] file;
+                string type;
+                if (Hub.WidgetFile(req.Path.Substring(8), out file, out type)) Send(stream, 200, type, file, allow, null);
+                else SendJson(stream, 404, Err("not found"), allow);
+                return;
+            }
+
             // The Control Hub app (the window). Changes need the same header as the widget's.
             if (req.Path.StartsWith("/api/hub/"))
             {

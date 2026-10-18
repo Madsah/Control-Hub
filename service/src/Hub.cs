@@ -239,6 +239,74 @@ namespace ControlPanelHelper
             lock (RestoreGate) return restoreName;
         }
 
+        // ------------------------------------------------------------------ the panel's code, served to the widget
+        // The widget in iCUE is a small starter: it loads the panel's files from here when this copy is the same
+        // or newer, so panel updates arrive with Control Hub's Update button instead of an iCUE re-import.
+
+        static readonly Dictionary<string, string> Types = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { ".js", "application/javascript; charset=utf-8" }, { ".css", "text/css; charset=utf-8" },
+            { ".html", "text/html; charset=utf-8" }, { ".json", "application/json; charset=utf-8" },
+            { ".svg", "image/svg+xml" }, { ".png", "image/png" }, { ".jpg", "image/jpeg" }, { ".webp", "image/webp" },
+            { ".woff2", "font/woff2" }, { ".woff", "font/woff" }, { ".ttf", "font/ttf" }
+        };
+        static long panelCodeAt;
+        static string panelCodeVersion;
+
+        public static string WidgetDir
+        {
+            get { return Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "widget"); }
+        }
+
+        /// <summary>
+        /// The version of the panel code Control Hub has: the "version" in its widget\files.js. (manifest.json's version
+        /// only changes when the starter in iCUE changes, so ordinary panel updates need no import in iCUE.)
+        /// </summary>
+        public static Dictionary<string, object> WidgetVersion()
+        {
+            var d = new Dictionary<string, object>();
+            d["ok"] = false;
+            try
+            {
+                string f = Path.Combine(WidgetDir, "files.js");
+                if (!File.Exists(f) || !File.Exists(Path.Combine(WidgetDir, "index.html"))) return d;
+                var m = System.Text.RegularExpressions.Regex.Match(File.ReadAllText(f, Encoding.UTF8), "version\\s*:\\s*\"([0-9][0-9.]*)\"");
+                if (m.Success)
+                {
+                    d["ok"] = true;
+                    d["version"] = m.Groups[1].Value;
+                }
+            }
+            catch (Exception ex) { Log.Write("Widget version: " + ex.Message); }
+            return d;
+        }
+
+        /// <summary>A file of the panel's code (only inside the widget folder, only known file types).</summary>
+        public static bool WidgetFile(string rel, out byte[] data, out string type)
+        {
+            data = null; type = null;
+            try
+            {
+                rel = Uri.UnescapeDataString(rel ?? "");
+                if (rel.Length == 0 || rel.Length > 200 || rel.Contains("..") || rel.Contains(":") || rel.Contains("\\") || rel.StartsWith("/")) return false;
+                string ext = Path.GetExtension(rel);
+                if (!Types.TryGetValue(ext, out type)) return false;
+                string root = Path.GetFullPath(WidgetDir);
+                string full = Path.GetFullPath(Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar)));
+                if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(full)) return false;
+                data = File.ReadAllBytes(full);
+                if (rel == "files.js")
+                {
+                    Interlocked.Exchange(ref panelCodeAt, DateTime.UtcNow.Ticks);
+                    var v = WidgetVersion();
+                    object vv;
+                    panelCodeVersion = v.TryGetValue("version", out vv) ? vv as string : null;
+                }
+                return true;
+            }
+            catch (Exception ex) { Log.Write("Widget file " + rel + ": " + ex.Message); return false; }
+        }
+
         // ------------------------------------------------------------------ status for the app
 
         public static Dictionary<string, object> Status()
@@ -254,6 +322,11 @@ namespace ControlPanelHelper
             d["restorePending"] = PendingRestore();
             d["folder"] = Settings.Folder;
             d["log"] = Log.FilePath;
+            // Where the panel got its code: from here (since this service started), or its own built-in copy.
+            d["panelFromHub"] = Interlocked.Read(ref panelCodeAt) != 0;
+            d["panelCodeVersion"] = panelCodeVersion;
+            object wv;
+            d["widgetVersion"] = WidgetVersion().TryGetValue("version", out wv) ? wv : null;
 
             var c = new Dictionary<string, object>();
             c["spotify"] = Conn(Spotify.Connected, Spotify.Configured, Spotify.Connected ? "Connected" : Spotify.Configured ? "Not logged in" : "Not set up");

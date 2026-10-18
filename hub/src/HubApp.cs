@@ -16,7 +16,7 @@ namespace ControlHub
 {
     static class HubApp
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.1.0";
         public const string Name = "Control Hub";
         public const string ServiceExe = "Control Hub Service.exe";
         public const string ServiceProcess = "Control Hub Service";
@@ -918,7 +918,10 @@ namespace ControlHub
             if (secs < 0) cpPanel.Set("Panel: not seen since the service started", Ui.Warn);
             else if (secs <= 30) cpPanel.Set("Panel: connected", Ui.Good);
             else cpPanel.Set("Panel: last seen " + (secs < 120 ? secs + " seconds" : (secs / 60) + " minutes") + " ago", Ui.Warn);
-            cpVersions.Text = "Service " + HubApi.Str(d, "version") + "  ·  Control Hub " + HubApp.Version;
+            string wv = HubApi.Str(d, "widgetVersion");
+            string panelSource = HubApi.Bool(d, "panelFromHub") ? "loaded from Control Hub" : secs < 0 ? "not loaded yet" : "using its built-in copy";
+            cpVersions.Text = "Service " + HubApi.Str(d, "version") + "  ·  Control Hub " + HubApp.Version +
+                (string.IsNullOrEmpty(wv) ? "" : "  ·  Panel " + wv + " (" + panelSource + ")");
 
             var conns = HubApi.Obj(d, "connections");
             foreach (var kv in connLabels)

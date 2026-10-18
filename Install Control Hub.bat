@@ -8,8 +8,9 @@ rem starts THIS file from it with /update, so the newest installer always does t
 rem
 rem It builds Control Hub Service and the Control Hub app with the C# compiler that comes with Windows,
 rem keeps the installed version in "previous" (for "Go back"), installs for your user (no admin needed),
-rem adds a Start menu shortcut, starts the service, updates the panel widget in iCUE and runs the install
-rem step of any project in the projects folder. If building fails, nothing is changed.
+rem adds a Start menu shortcut, starts the service, copies the panel code to Control Hub (the widget's starter in
+rem iCUE loads it from there, so iCUE is only opened when the starter itself changed) and runs the install step
+rem of any project in the projects folder. If building fails, nothing is changed.
 
 set "MODE=%~1"
 set "DEST=%LOCALAPPDATA%\Programs\Control Hub"
@@ -70,8 +71,23 @@ if errorlevel 1 echo Couldn't make the Start menu shortcut. You can still open C
 start "" "%DEST%\Control Hub Service.exe"
 
 echo.
-echo [5/6] Updating the panel widget in iCUE...
+echo [5/6] The panel...
+rem Control Hub keeps its own copy of the panel code; the widget's starter in iCUE loads it from there.
+robocopy "widget" "%DEST%\widget" /MIR /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 echo Couldn't copy the panel code to Control Hub. The panel keeps using its own built-in copy.
+rem iCUE only needs the widget again when the starter itself changed (index.html, manifest.json, boot.js).
+set "STARTER="
+set "OLDSTARTER="
+set "WIDGETOK="
+for /f "delims=" %%H in ('powershell -NoProfile -Command "(Get-FileHash -Algorithm SHA256 widget\index.html,widget\manifest.json,widget\scripts\boot.js | ForEach-Object { $_.Hash }) -join ''"') do set "STARTER=%%H"
+if exist "%DEST%\starter.hash" set /p OLDSTARTER=<"%DEST%\starter.hash"
+if defined STARTER if /i "%STARTER%"=="%OLDSTARTER%" (
+  echo The panel is updated through Control Hub. Nothing to do in iCUE.
+  goto afterwidget
+)
 call :widget
+if defined WIDGETOK if defined STARTER (>"%DEST%\starter.hash" echo %STARTER%)
+:afterwidget
 
 echo.
 echo [6/6] Projects...
@@ -108,6 +124,7 @@ for /f "delims=" %%F in ('powershell -NoProfile -Command "Get-ChildItem -Recurse
 if not defined PKG goto widgetfailed
 echo Opening the new widget in iCUE. Click there to update it.
 start "" "%PKG%"
+set "WIDGETOK=1"
 exit /b 0
 :widgetfailed
 echo.

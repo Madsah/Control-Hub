@@ -90,6 +90,10 @@ var Round11 = (function () {
 		}).catch(function () { U.toast("Couldn't restore that backup"); });
 	}
 
+	/* ================================================================== where the panel came from */
+	/* Test of the starter (Round 11b): say once that this panel was loaded from Control Hub. */
+	if (window.CP_SOURCE === "hub") setTimeout(function () { U.toast("Panel loaded from Control Hub (" + (window.CP_VERSION || "") + ")"); }, 5000);
+
 	return {
 		restoreFromHub: restoreFromHub,
 	};
