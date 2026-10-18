@@ -1,11 +1,11 @@
 {
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"service": "3.2.0",
-	"hub": "1.2.1",
+	"hub": "1.2.2",
 	"widget": "5.1.1",
 	"date": "2026-10-18",
 	"notes": [
-		"If Control Hub can't start, it now says why on screen (and saves it in hub.log), instead of not opening at all.",
+		"Fixes Control Hub crashing when it opens (1.2.0 and 1.2.1).",
 		"Updates no longer get stuck on \"the file is being used by another process\".",
 		"New look for Control Hub: Overview with cockpit-style status lights, and Windows 11's own font and icons.",
 		"New Backup page: back up everything to one file, optionally with your logins (protected by a password).",

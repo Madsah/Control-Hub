@@ -16,7 +16,7 @@ namespace ControlHub
 {
     static class HubApp
     {
-        public const string Version = "1.2.1";
+        public const string Version = "1.2.2";
         public const string Name = "Control Hub";
         public const string ServiceExe = "Control Hub Service.exe";
         public const string ServiceProcess = "Control Hub Service";

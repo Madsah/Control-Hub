@@ -305,13 +305,7 @@ namespace ControlHub
 
         public Row(string glyph, string title, string subtitle)
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-            IconGlyph = glyph;
-            Title = title;
-            Subtitle = subtitle;
-            BackColor = T.Surf;
-            baseHeight = T.Px(66);
-            Height = baseHeight;
+            // The button area must exist before the size is set: setting the size lays the row out right away.
             Side = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
@@ -322,7 +316,14 @@ namespace ControlHub
                 Margin = new Padding(0),
                 Padding = new Padding(0)
             };
+            IconGlyph = glyph;
+            Title = title;
+            Subtitle = subtitle;
+            baseHeight = T.Px(66);
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            BackColor = T.Surf;
             Controls.Add(Side);
+            Height = baseHeight;
         }
 
         public T2 Add<T2>(T2 c) where T2 : Control
@@ -355,6 +356,7 @@ namespace ControlHub
         protected override void OnLayout(LayoutEventArgs e)
         {
             base.OnLayout(e);
+            if (Side == null) return;
             var pref = Side.PreferredSize;
             var want = new Rectangle(Math.Max(0, Width - pref.Width - T.Px(16)), Math.Max(0, (baseHeight - pref.Height) / 2), pref.Width, pref.Height);
             if (Side.Bounds != want) Side.Bounds = want;
@@ -381,7 +383,7 @@ namespace ControlHub
                 using (var b = new SolidBrush(T.Raise)) g.FillPath(b, p);
                 T.DrawText(g, IconGlyph, T.Icon, IconColor, Rectangle.Round(ir), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             }
-            int right = Side.Visible && Side.Controls.Count > 0 ? Side.Left - T.Px(12) : Width - T.Px(16);
+            int right = Side != null && Side.Visible && Side.Controls.Count > 0 ? Side.Left - T.Px(12) : Width - T.Px(16);
             int x = TextLeft, w = Math.Max(10, right - x);
             bool two = !string.IsNullOrEmpty(Subtitle);
             int titleH = T.Body.Height + T.Px(2);
@@ -414,7 +416,7 @@ namespace ControlHub
                 using (var p = T.Round(new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f), T.Px(6)))
                 using (var b = new SolidBrush(Selected ? T.Raise : Color.FromArgb(19, 27, 41))) g.FillPath(b, p);
             if (Selected)
-                using (var p = T.Round(new RectangleF(0, T.Px(11), T.Px(3), Height - T.Px(22)), T.Px(1.5f)))
+                using (var p = T.Round(new RectangleF(0, T.Px(11), T.Px(3), Height - T.Px(22)), 1f))
                 using (var b = new SolidBrush(T.Acc)) g.FillPath(b, p);
             Color ink = Selected ? T.Text : Color.FromArgb(184, 195, 214);
             T.DrawText(g, IconGlyph, T.Icon, ink, new Rectangle(T.Px(12), 0, T.Px(24), Height), TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
