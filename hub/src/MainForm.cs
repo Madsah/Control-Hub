@@ -409,8 +409,10 @@ namespace ControlHub
         {
             if (updInfo == null || !updInfo.Newer || updBusy) return;
             if (!Dlg.Confirm(this, "Update to version " + updInfo.Version + "?",
-                "Control Hub closes, and a window builds and installs the new version (about a minute). If anything fails there, nothing is changed.\n\n" +
+                "Control Hub closes, and the update window downloads, builds and installs the new version (about a minute), then opens Control Hub again. If anything fails there, nothing is changed.\n\n" +
                 "If the new version changes the panel's starter, iCUE asks you to accept the widget at the end.", "Update")) return;
+            // The update window does everything and shows the progress; the old way (a command window) is the fallback.
+            if (Updater.StartUpdateWindow(updInfo.Version)) { Application.Exit(); return; }
             updBusy = true;
             upNow.Enabled = false; ovUpdateNow.Enabled = false; upCheck.Enabled = false;
             upMine.SetText("Control Hub " + Updater.Installed(), "Downloading the new version…");

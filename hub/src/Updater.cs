@@ -11,6 +11,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Text;
+using System.Windows.Forms;
 
 namespace ControlHub
 {
@@ -158,6 +159,31 @@ namespace ControlHub
                     try { File.Delete(f); } catch { }
             }
             catch { }
+        }
+
+        /// <summary>
+        /// Opens the update window: a copy of this program in the temp folder (so the installer can replace Control Hub
+        /// while the window keeps showing the progress). Control Hub closes right after.
+        /// </summary>
+        public static bool StartUpdateWindow(string version)
+        {
+            try
+            {
+                var v = new StringBuilder();
+                foreach (char c in version ?? "") if (char.IsDigit(c) || c == '.') v.Append(c);
+                CleanOld();
+                string dir = Path.Combine(WorkRoot, "window-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+                Directory.CreateDirectory(dir);
+                string exe = Path.Combine(dir, "Control Hub Updater.exe");
+                File.Copy(Application.ExecutablePath, exe, true);
+                Process.Start(new ProcessStartInfo(exe, "--update \"" + HubApp.Folder + "\" " + v) { UseShellExecute = false, WorkingDirectory = dir });
+                return true;
+            }
+            catch (Exception ex)
+            {
+                HubApp.Step("Update window didn't start: " + ex.Message);
+                return false;
+            }
         }
 
         /// <summary>Starts the new version's installer in update mode. Control Hub closes right after.</summary>

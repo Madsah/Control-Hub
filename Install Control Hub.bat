@@ -13,6 +13,9 @@ rem iCUE loads it from there, so iCUE is only opened when the starter itself cha
 rem of any project in the projects folder. If building fails, nothing is changed.
 
 set "MODE=%~1"
+rem /quiet (second argument): run by Control Hub's update window, hidden. No waiting for a key press.
+set "QUIET="
+if /i "%~2"=="/quiet" set "QUIET=1"
 set "DEST=%LOCALAPPDATA%\Programs\Control Hub"
 set "BUILD=%TEMP%\ControlHubBuild"
 if /i "%MODE%"=="/update" title Updating Control Hub
@@ -22,7 +25,7 @@ if not exist "%CSC%" set "CSC=%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.ex
 if not exist "%CSC%" (
   echo Could not find the .NET Framework 4 compiler on this PC.
   echo Turn on ".NET Framework 4.8 Advanced Services" in "Turn Windows features on or off", then try again.
-  pause
+  if not defined QUIET pause
   exit /b 1
 )
 
@@ -45,7 +48,8 @@ echo [3/6] Installing to %DEST% ...
 taskkill /im "Control Hub.exe" /f >nul 2>nul
 taskkill /im "Control Hub Service.exe" /f >nul 2>nul
 taskkill /im "Control Panel Helper.exe" /f >nul 2>nul
-timeout /t 2 /nobreak >nul
+rem A short wait so the closed programs let go of their files (ping also works without a console window).
+ping -n 3 127.0.0.1 >nul
 if not exist "%DEST%" mkdir "%DEST%"
 rem Keep the installed version, so Control Hub can go back to it.
 if exist "%DEST%\Control Hub Service.exe" (
@@ -102,6 +106,7 @@ if /i "%MODE%"=="/update" (echo Control Hub is updated.) else (echo Done! Contro
 start "" /D "%DEST%" "%DEST%\Control Hub.exe"
 rmdir /s /q "%BUILD%" >nul 2>nul
 echo.
+if defined QUIET exit /b 0
 if /i "%MODE%"=="/update" (
   echo This window closes by itself in 15 seconds.
   timeout /t 15 >nul
@@ -148,12 +153,12 @@ exit /b 0
 echo.
 echo The build failed, so nothing was changed. Your current version keeps working.
 echo Please take a screenshot of everything above, or copy it, and send it to Claude.
-pause
+if not defined QUIET pause
 exit /b 1
 
 :copyfailed
 echo.
 echo Couldn't copy the new files into %DEST%.
 echo Is Control Hub still open? Close it and run this again.
-pause
+if not defined QUIET pause
 exit /b 1

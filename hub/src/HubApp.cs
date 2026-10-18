@@ -16,7 +16,7 @@ namespace ControlHub
 {
     static class HubApp
     {
-        public const string Version = "1.3.1";
+        public const string Version = "1.4.0";
         public const string Name = "Control Hub";
         public const string ServiceExe = "Control Hub Service.exe";
         public const string ServiceProcess = "Control Hub Service";
@@ -25,12 +25,20 @@ namespace ControlHub
         [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
         [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
 
-        public static string Folder { get { return Path.GetDirectoryName(Application.ExecutablePath); } }
+        /// <summary>The install folder. The update window runs from a temp copy, so it's told where Control Hub is installed.</summary>
+        public static string FolderOverride;
+        public static string Folder { get { return FolderOverride ?? Path.GetDirectoryName(Application.ExecutablePath); } }
         public static string ServicePath { get { return Path.Combine(Folder, ServiceExe); } }
 
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            // "Control Hub Updater.exe --update <install folder> <version>": the update window (see Updater.StartUpdateWindow).
+            if (args != null && args.Length >= 2 && args[0] == "--update")
+            {
+                RunUpdateWindow(args[1], args.Length > 2 ? args[2] : "");
+                return;
+            }
             bool createdNew;
             using (var mutex = new Mutex(true, "ControlHub.App.SingleInstance", out createdNew))
             {
@@ -68,6 +76,23 @@ namespace ControlHub
                 }
                 catch (Exception ex) { Report(ex, true); }
             }
+        }
+
+        /// <summary>The update window. No single-instance lock: the new Control Hub must be able to start while it's open.</summary>
+        static void RunUpdateWindow(string folder, string version)
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += delegate (object s, ThreadExceptionEventArgs e) { Report(e.Exception, false); };
+            AppDomain.CurrentDomain.UnhandledException += delegate (object s, UnhandledExceptionEventArgs e) { Report(e.ExceptionObject as Exception, true); };
+            try
+            {
+                if (Directory.Exists(folder)) FolderOverride = folder.TrimEnd('\\');
+                T.Init();
+                Application.Run(new UpdateWindow(string.IsNullOrEmpty(version) ? "the newest version" : version));
+            }
+            catch (Exception ex) { Report(ex, true); }
         }
 
         // ------------------------------------------------------------------ startup log and error reports
