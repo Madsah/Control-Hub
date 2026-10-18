@@ -26,8 +26,13 @@ pluginLinkproviderEvents = { onInitialized: function () {} };
 		var p = parseInt(window.helperPort, 10);
 		if (p > 1023 && p < 65536) port = p;
 	} catch (e) {}
-	var HUB = "http://127.0.0.1:" + port + "/widget/";
+	var BASE = "http://127.0.0.1:" + port + "/";
+	var HUB = BASE + "widget/";
 	var settled = false;
+	var startedAt = Date.now();
+	// "#cp-local=<file>": the last start from Control Hub failed on that file, so this start uses the built-in copy.
+	var LOCAL = location.hash.indexOf("#cp-local") === 0;
+	var failedFile = LOCAL ? decodeURIComponent(location.hash.split("=")[1] || "") : "";
 
 	/* 1 if a is newer than b, -1 if older, 0 if the same ("5.10.0" is newer than "5.9.3"). */
 	function cmp(a, b) {
@@ -45,41 +50,88 @@ pluginLinkproviderEvents = { onInitialized: function () {} };
 		window.CP_VERSION = version;
 		var failed = false;
 		var bust = source === "hub" ? "?v=" + encodeURIComponent(version) : "";
-		function fail() {
+		function fail(file) {
 			if (failed) return;
 			failed = true;
-			if (onFail) onFail();
+			if (onFail) onFail(file);
 		}
 		(files.styles || []).forEach(function (href) {
 			var l = document.createElement("link");
 			l.rel = "stylesheet";
 			l.href = base + href + bust;
-			if (onFail) l.onerror = fail;
+			if (onFail) l.onerror = function () { fail(href); };
 			document.head.appendChild(l);
 		});
-		(files.scripts || []).forEach(function (src) {
+		var scripts = files.scripts || [];
+		scripts.forEach(function (src, i) {
 			var s = document.createElement("script");
 			s.src = base + src + bust;
 			s.async = false;
-			if (onFail) s.onerror = fail;
+			if (onFail) s.onerror = function () { fail(src); };
+			// The last one has run: the panel is up. Tell Control Hub what runs, and start watching for updates.
+			if (i === scripts.length - 1) s.onload = function () { if (!failed) { report(); watch(); } };
 			document.body.appendChild(s);
 		});
+		if (!scripts.length) { report(); watch(); }
+	}
+
+	/* Tell Control Hub which panel code really runs (and what didn't load), for Control Hub → Help. */
+	function report() {
+		try {
+			fetch(BASE + "widget-report?source=" + encodeURIComponent(window.CP_SOURCE || "") + "&version=" + encodeURIComponent(window.CP_VERSION || "") +
+				(failedFile ? "&failed=" + encodeURIComponent(failedFile) : ""), { cache: "no-store" }).then(null, function () {});
+		} catch (e) {}
+	}
+
+	/* Once a minute: has Control Hub got newer panel code (an update), or is it back after the built-in copy had to be used?
+	   Then the panel starts again by itself — but only while nobody is using it. */
+	var lastTouch = Date.now();
+	document.addEventListener("pointerdown", function () { lastTouch = Date.now(); }, true);
+	function busy() {
+		var m = document.getElementById("modal");
+		return Date.now() - lastTouch < 20000 || (window.App && App.editing) || (m && !m.hidden) || !!document.querySelector(".pop");
+	}
+	var watching = false;
+	function watch() {
+		if (watching || !window.fetch) return;
+		watching = true;
+		setInterval(function () {
+			if (document.hidden) return;
+			fetch(BASE + "widget-version", { cache: "no-store" })
+				.then(function (r) { return r.json(); })
+				.then(function (v) {
+					if (!v || !v.ok || !v.version) return;
+					var restart = window.CP_SOURCE === "hub"
+						? cmp(v.version, window.CP_VERSION) > 0
+						// Built-in copy: Control Hub is there now. After a failed load, wait 10 minutes before trying again.
+						: cmp(v.version, BUILT_IN.version) >= 0 && (!LOCAL || Date.now() - startedAt > 600000);
+					if (!restart) { report(); return; }
+					(function tryNow() {
+						if (busy()) return setTimeout(tryNow, 5000);
+						location.replace(location.href.split("#")[0]);
+					})();
+				})
+				.then(null, function () {});
+		}, 60000);
 	}
 
 	function builtIn() {
 		if (settled) return;
 		settled = true;
 		loadAll("", BUILT_IN, "built-in", BUILT_IN.version, null);
+		// The built-in copy has no onload chain if it fails; make sure watching starts anyway.
+		setTimeout(function () { report(); watch(); }, 8000);
 	}
 
 	/* Something from Control Hub didn't load: start once more, with the built-in copy (the #cp-local mark). */
-	function fallback() {
-		try { history.replaceState(null, "", location.href.split("#")[0] + "#cp-local"); } catch (e) {}
+	function fallback(file) {
+		try { history.replaceState(null, "", location.href.split("#")[0] + "#cp-local=" + encodeURIComponent(file || "?")); } catch (e) {}
 		location.reload();
 	}
 
-	if (location.hash === "#cp-local" || !window.fetch || !window.DOMParser) return builtIn();
-	var timer = setTimeout(builtIn, 1500);
+	if (LOCAL || !window.fetch || !window.DOMParser) return builtIn();
+	// Control Hub may still be starting (right after Windows starts): give it a few seconds.
+	var timer = setTimeout(builtIn, 4000);
 
 	fetch(HUB.replace(/widget\/$/, "widget-version"), { cache: "no-store" })
 		.then(function (r) { return r.json(); })
@@ -106,14 +158,14 @@ pluginLinkproviderEvents = { onInitialized: function () {} };
 					var list = document.createElement("script");
 					list.src = HUB + "files.js?v=" + encodeURIComponent(v.version);
 					list.onload = function () { loadAll(HUB, window.CP_FILES || BUILT_IN, "hub", v.version, fallback); };
-					list.onerror = fallback;
+					list.onerror = function () { fallback("files.js"); };
 					document.body.appendChild(list);
 				});
 		})
 		.catch(function () {
 			clearTimeout(timer);
 			// Already switched over to Control Hub's copy when it failed: start again with the built-in one.
-			if (settled && !window.CP_SOURCE) fallback();
+			if (settled && !window.CP_SOURCE) fallback("index.html");
 			else builtIn();
 		});
 })();

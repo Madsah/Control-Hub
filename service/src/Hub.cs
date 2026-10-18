@@ -252,6 +252,30 @@ namespace ControlPanelHelper
         };
         static long panelCodeAt;
         static string panelCodeVersion;
+        static string panelRunVersion, panelRunSource, panelFailed;
+
+        static string Clean(string s, int max)
+        {
+            if (string.IsNullOrEmpty(s)) return null;
+            var sb = new StringBuilder();
+            foreach (char c in s) if (char.IsLetterOrDigit(c) || c == '.' || c == '/' || c == '-' || c == '_') sb.Append(c);
+            string r = sb.ToString();
+            return r.Length == 0 ? null : r.Length > max ? r.Substring(0, max) : r;
+        }
+
+        /// <summary>The panel says which code it really runs (from here, or its built-in copy) and what failed to load.</summary>
+        public static void PanelReport(string source, string version, string failed)
+        {
+            source = Clean(source, 20);
+            version = Clean(version, 20);
+            failed = Clean(failed, 120);
+            if (source != panelRunSource || version != panelRunVersion || failed != null)
+                Log.Write("Panel runs " + (version ?? "?") + " (" + (source == "hub" ? "from Control Hub" : "its built-in copy") + ")" +
+                    (failed != null ? ", because this didn't load from Control Hub: " + failed : ""));
+            panelRunSource = source;
+            panelRunVersion = version;
+            if (failed != null) panelFailed = failed;
+        }
 
         public static string WidgetDir
         {
@@ -325,6 +349,9 @@ namespace ControlPanelHelper
             // Where the panel got its code: from here (since this service started), or its own built-in copy.
             d["panelFromHub"] = Interlocked.Read(ref panelCodeAt) != 0;
             d["panelCodeVersion"] = panelCodeVersion;
+            d["panelRunning"] = panelRunVersion;
+            d["panelSource"] = panelRunSource;
+            d["panelFailed"] = panelFailed;
             object wv;
             d["widgetVersion"] = WidgetVersion().TryGetValue("version", out wv) ? wv : null;
 

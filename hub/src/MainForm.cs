@@ -714,7 +714,9 @@ namespace ControlHub
             sb.AppendLine("Control Hub " + HubApp.Version + " (installed " + Updater.Installed() + ") on " + Environment.OSVersion.VersionString);
             if (status != null)
             {
-                sb.AppendLine("Service " + HubApi.Str(status, "version") + ", start with Windows: " + HubApi.Bool(status, "autostart") + ", panel seen " + HubApi.Long(status, "panelSeconds") + " s ago, panel " + HubApi.Str(status, "widgetVersion") + (HubApi.Bool(status, "panelFromHub") ? " from Control Hub" : ""));
+                sb.AppendLine("Service " + HubApi.Str(status, "version") + ", start with Windows: " + HubApi.Bool(status, "autostart") + ", panel seen " + HubApi.Long(status, "panelSeconds") + " s ago, panel " + HubApi.Str(status, "widgetVersion") + (HubApi.Bool(status, "panelFromHub") ? " from Control Hub" : "") +
+                    ", panel runs " + (HubApi.Str(status, "panelRunning") ?? "?") + " (" + (HubApi.Str(status, "panelSource") ?? "?") + ")" +
+                    (HubApi.Str(status, "panelFailed") != null ? ", failed: " + HubApi.Str(status, "panelFailed") : ""));
                 var conns = HubApi.Obj(status, "connections");
                 if (conns != null) foreach (var kv in conns) sb.AppendLine("  " + kv.Key + ": " + HubApi.Str(kv.Value as Dictionary<string, object>, "text"));
             }
@@ -782,6 +784,13 @@ namespace ControlHub
             lPanel.Set(panelOn ? "Connected" : secs < 0 ? "Not seen yet" : "Last seen " + Ago(secs), panelOn ? T.Ok : T.Warn);
             string wv = HubApi.Str(d, "widgetVersion");
             string source = HubApi.Bool(d, "panelFromHub") ? "loaded from Control Hub" : secs < 0 ? "not loaded yet" : "its built-in copy";
+            // Newer service: the panel itself says what it runs.
+            string run = HubApi.Str(d, "panelRunning");
+            if (!string.IsNullOrEmpty(run))
+            {
+                wv = run;
+                source = HubApi.Str(d, "panelSource") == "hub" ? "loaded from Control Hub" : "its built-in copy";
+            }
             ovPanelPill.Set(panelOn ? "Running" : "Panel off", panelOn ? T.Ok : T.Warn);
             prPill.Set(panelOn ? "Running" : "Panel off", panelOn ? T.Ok : T.Warn);
             ovPanel.SetText("Control Panel", "XENEON EDGE" + (string.IsNullOrEmpty(wv) ? "" : "  ·  Panel " + wv + ", " + source));

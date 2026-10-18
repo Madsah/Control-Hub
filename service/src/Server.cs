@@ -208,6 +208,14 @@ namespace ControlPanelHelper
 
             // The panel's code for the widget's starter (see Hub.WidgetFile).
             if (req.Method == "GET" && req.Path == "/widget-version") { SendJson(stream, 200, Hub.WidgetVersion(), allow); return; }
+            if (req.Method == "GET" && req.Path == "/widget-report")
+            {
+                Hub.PanelReport(req.Param("source"), req.Param("version"), req.Param("failed"));
+                var ok = new Dictionary<string, object>();
+                ok["ok"] = true;
+                SendJson(stream, 200, ok, allow);
+                return;
+            }
             if (req.Method == "GET" && req.Path.StartsWith("/widget/"))
             {
                 byte[] file;
