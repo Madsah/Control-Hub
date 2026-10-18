@@ -18,7 +18,7 @@ using System.Web.Script.Serialization;
 
 namespace ControlPanelHelper
 {
-    static class Scenery
+    static class AddonScenery
     {
         static readonly string ScanPath = Path.Combine(FlightRec.Folder, "scenery.json");
         static readonly string DealsPath = Path.Combine(FlightRec.Folder, "deals.json");

@@ -292,8 +292,8 @@ namespace ControlPanelHelper
                 }
                 if (req.Method == "GET" && req.Path == "/api/fl/scenery")
                 {
-                    if (req.Param("rescan") == "1") ThreadPool.QueueUserWorkItem(delegate { Scenery.Scan(true); });
-                    var mine = Scenery.InstalledAirports();
+                    if (req.Param("rescan") == "1") ThreadPool.QueueUserWorkItem(delegate { AddonScenery.Scan(true); });
+                    var mine = AddonScenery.InstalledAirports();
                     var inst = new List<Dictionary<string, object>>();
                     foreach (var i in mine.Values)
                     {
@@ -303,9 +303,9 @@ namespace ControlPanelHelper
                     }
                     fl["ok"] = true;
                     fl["installed"] = inst;
-                    fl["note"] = Scenery.ScanNote;
+                    fl["note"] = AddonScenery.ScanNote;
                     fl["deals"] = RouteData.DealList(Regions(req.Param("regions")), 12);
-                    fl["dealsNote"] = Scenery.DealsNote;
+                    fl["dealsNote"] = AddonScenery.DealsNote;
                     SendJson(stream, 200, fl, allow);
                     return;
                 }

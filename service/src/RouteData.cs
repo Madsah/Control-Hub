@@ -269,7 +269,7 @@ namespace ControlPanelHelper
             double minNm = Math.Max(0, (q.MinMin - overhead) * kt / 60.0), maxNm = Math.Max(minNm + 20, (q.MaxMin - overhead) * kt / 60.0);
             var visited = Visited();
             var lengths = Runways.MaxLengths();
-            var mine = Scenery.InstalledAirports();
+            var mine = AddonScenery.InstalledAirports();
             var deals = DealsByAirport();
             var rnd = new Random();
 
@@ -342,7 +342,7 @@ namespace ControlPanelHelper
 
         static List<Dictionary<string, object>> Hits(Airport origin, Dictionary<string, List<Route>> rts, Dictionary<string, Airport> apts, Dictionary<string, string> lines,
             Search q, double minNm, double maxNm, int kt, int overhead, HashSet<string> visited, Dictionary<string, double> lengths,
-            Dictionary<string, Scenery.Installed> mine, Dictionary<string, List<Scenery.Deal>> deals)
+            Dictionary<string, AddonScenery.Installed> mine, Dictionary<string, List<AddonScenery.Deal>> deals)
         {
             var hits = new List<Dictionary<string, object>>();
             List<Route> list;
@@ -384,9 +384,9 @@ namespace ControlPanelHelper
         }
 
         /// <summary>Your scenery for an airport, or else the best scenery deal for it (MSFS 2024 first, then the biggest discount).</summary>
-        static void AddScenery(Dictionary<string, object> d, string icao, Dictionary<string, Scenery.Installed> mine, Dictionary<string, List<Scenery.Deal>> deals)
+        static void AddScenery(Dictionary<string, object> d, string icao, Dictionary<string, AddonScenery.Installed> mine, Dictionary<string, List<AddonScenery.Deal>> deals)
         {
-            Scenery.Installed s;
+            AddonScenery.Installed s;
             if (mine.TryGetValue(icao, out s))
             {
                 var e = new Dictionary<string, object>();
@@ -394,11 +394,11 @@ namespace ControlPanelHelper
                 d["scenery"] = e;
                 return;
             }
-            List<Scenery.Deal> list;
+            List<AddonScenery.Deal> list;
             if (deals.TryGetValue(icao, out list) && list.Count > 0) d["deal"] = DealInfo(list[0]);
         }
 
-        public static Dictionary<string, object> DealInfo(Scenery.Deal x)
+        public static Dictionary<string, object> DealInfo(AddonScenery.Deal x)
         {
             var e = new Dictionary<string, object>();
             e["icao"] = x.Icao; e["store"] = x.Store; e["title"] = x.Title; e["url"] = x.Url; e["currency"] = x.Currency;
@@ -407,13 +407,13 @@ namespace ControlPanelHelper
             return e;
         }
 
-        static Dictionary<string, List<Scenery.Deal>> DealsByAirport()
+        static Dictionary<string, List<AddonScenery.Deal>> DealsByAirport()
         {
-            var map = new Dictionary<string, List<Scenery.Deal>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var x in Scenery.Deals())
+            var map = new Dictionary<string, List<AddonScenery.Deal>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var x in AddonScenery.Deals())
             {
-                List<Scenery.Deal> l;
-                if (!map.TryGetValue(x.Icao, out l)) map[x.Icao] = l = new List<Scenery.Deal>();
+                List<AddonScenery.Deal> l;
+                if (!map.TryGetValue(x.Icao, out l)) map[x.Icao] = l = new List<AddonScenery.Deal>();
                 l.Add(x);
             }
             foreach (var l in map.Values)
@@ -431,9 +431,9 @@ namespace ControlPanelHelper
                 apts = airports ?? new Dictionary<string, Airport>();
                 if (airports != null) drop.Change(600000, Timeout.Infinite);
             }
-            var mine = Scenery.InstalledAirports();
+            var mine = AddonScenery.InstalledAirports();
             var visited = Visited();
-            var best = new Dictionary<string, Scenery.Deal>(StringComparer.OrdinalIgnoreCase);
+            var best = new Dictionary<string, AddonScenery.Deal>(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in DealsByAirport()) if (!mine.ContainsKey(kv.Key)) best[kv.Key] = kv.Value[0];
             var list = new List<Dictionary<string, object>>();
             foreach (var x in best.Values)
