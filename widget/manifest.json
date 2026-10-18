@@ -1,0 +1,38 @@
+{
+	"author": "Mads",
+	"id": "com.mads.controlpanel",
+	"name": "Control Panel",
+	"description": "Build your own control panel on the XENEON EDGE: app shortcuts with real icons, folders, media, speakers and mic, app mixer, power, gauges, sensors, storage, network and batteries. Drag, resize and customize your tiles right on the screen.",
+	"version": "5.0.0",
+	"preview_icon": "resources/icon.svg",
+	"min_app_version": "5.47",
+	"min_framework_version": "1.0.0",
+	"os": [
+		{
+			"platform": "windows"
+		}
+	],
+	"supported_devices": [
+		{
+			"type": "dashboard_lcd"
+		}
+	],
+	"interactive": true,
+	"required_plugins": [
+		"widgetbuilder.sensorsdataprovider:Sensors:1.0",
+		"widgetbuilder.mediadataprovider:Media:1.0",
+		"widgetbuilder.fpsdataprovider:Fps:1.0",
+		"widgetbuilder.linkprovider:Url:1.0"
+	],
+	"permissions": [
+		{
+			"type": "url",
+			"domain": "localhost",
+			"port": 39812
+		},
+		{
+			"type": "url",
+			"domain": "any"
+		}
+	]
+}

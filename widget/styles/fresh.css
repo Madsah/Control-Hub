@@ -1,0 +1,196 @@
+/* Control Panel — the new look (Round 7C).
+ * Everything here only applies with body.fresh. Edit → Pages → Look → "Classic look" removes that class,
+ * and the panel looks exactly like before. Nothing here changes where things sit:
+ * only color, light, shadow, roundness and motion (and digits that all have the same width). */
+
+/* ------------------------------------------------------------------ tiles */
+body.fresh .tile {
+	border-radius: calc(var(--cell) * 0.17);
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.015) 55%, rgba(0, 0, 0, 0.04));
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 24px -10px rgba(0, 0, 0, 0.6), 0 2px 5px rgba(0, 0, 0, 0.22);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* (Not while editing: dragging a tile must follow your finger without delay.) */
+body.fresh:not(.editing) .tile {
+	transition: transform 0.14s cubic-bezier(0.3, 0.7, 0.4, 1), filter 0.14s ease;
+}
+
+body.fresh.theme-light .tile,
+body.fresh.theme-navy .tile {
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 6px 16px -6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.16);
+}
+
+body.fresh.glass .tile {
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 45%);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 8px 20px -8px rgba(0, 0, 0, 0.4);
+}
+
+/* A soft press: the tile sinks a little instead of only getting darker. */
+body.fresh:not(.editing) .tile.press:active {
+	transform: scale(0.975);
+	filter: brightness(0.96);
+}
+
+/* Buttons inside tiles give a small squeeze when tapped. */
+body.fresh:not(.editing) .tile button:active {
+	transform: scale(0.93);
+}
+
+body.fresh .tile button {
+	transition: transform 0.1s ease, background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+/* Numbers don't jump around when they change. */
+body.fresh .tile b,
+body.fresh .tile .big,
+body.fresh .tile strong {
+	font-variant-numeric: tabular-nums;
+}
+
+/* Tile headers: the icon picks up your accent color. */
+body.fresh .th > .ic {
+	color: var(--accent);
+}
+
+/* "Helper not running" and other notices: calmer, with a hint of the accent. */
+body.fresh .notice .pill {
+	box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.35);
+}
+
+/* Big round buttons and gauges get a soft glow in your accent color. */
+body.fresh .m-play,
+body.fresh .sp-play {
+	box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.45);
+}
+
+body.fresh .g-fg {
+	filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.45));
+}
+
+body.fresh .pw-btn {
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* Inner panels (the cells inside the flight and CS2 tiles) get the same soft light. */
+body.fresh .br-c,
+body.fresh .fs-c,
+body.fresh .cs-kda div,
+body.fresh .hl-row,
+body.fresh .nf-row,
+body.fresh .ch-row,
+body.fresh .fd-c {
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+}
+
+/* Sliders: a bit of glow on the filled part and a knob that grows while you hold it. */
+body.fresh .slider .fill {
+	box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35);
+}
+
+body.fresh .slider .knob {
+	transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+body.fresh .slider:active .knob {
+	box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.22), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.fresh .slider:not(.vert):active .knob {
+	transform: translate(-50%, -50%) scale(1.15);
+}
+
+body.fresh .slider.vert:active .knob {
+	transform: translate(-50%, 50%) scale(1.15);
+}
+
+/* On / off switches slide with a little spring. */
+body.fresh .switch i {
+	transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1), background-color 0.15s ease;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ------------------------------------------------------------------ pages */
+body.fresh .board.slide-l {
+	animation: freshSlideL 0.34s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+body.fresh .board.slide-r {
+	animation: freshSlideR 0.34s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+@keyframes freshSlideL {
+	from { transform: translateX(64px) scale(0.985); opacity: 0; }
+	to { transform: none; opacity: 1; }
+}
+
+@keyframes freshSlideR {
+	from { transform: translateX(-64px) scale(0.985); opacity: 0; }
+	to { transform: none; opacity: 1; }
+}
+
+body.fresh .dot::before {
+	transition: width 0.25s cubic-bezier(0.3, 1.3, 0.5, 1), background 0.2s;
+}
+
+body.fresh .dot.on::before {
+	width: 18px;
+	box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6);
+}
+
+/* ------------------------------------------------------------------ windows (settings, pickers) */
+body.fresh .modal {
+	background: rgba(0, 0, 0, 0.42);
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+	animation: freshFade 0.18s ease;
+}
+
+body.fresh .modal-card {
+	border-radius: 20px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+	animation: freshPop 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+@keyframes freshFade {
+	from { opacity: 0; }
+}
+
+@keyframes freshPop {
+	from { transform: translateY(14px) scale(0.97); opacity: 0; }
+}
+
+body.fresh .toast {
+	border-radius: 99px;
+	padding: 9px 18px;
+	box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+}
+
+body.fresh .pill.accent {
+	box-shadow: 0 3px 10px rgba(var(--accent-rgb), 0.35);
+}
+
+/* The Add-a-tile drawer slides in. */
+body.fresh .drawer:not([hidden]) {
+	animation: freshDrawer 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes freshDrawer {
+	from { transform: translateX(40px); opacity: 0; }
+}
+
+/* ------------------------------------------------------------------ while editing */
+body.fresh.editing .tile {
+	box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.45), 0 6px 16px -6px rgba(0, 0, 0, 0.45);
+}
+
+/* Someone who prefers less motion in Windows gets no animations. */
+@media (prefers-reduced-motion: reduce) {
+	body.fresh *,
+	body.fresh *::before {
+		animation: none !important;
+		transition: none !important;
+	}
+}

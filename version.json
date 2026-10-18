@@ -1,0 +1,14 @@
+{
+	"version": "1.0.0",
+	"service": "3.0.0",
+	"hub": "1.0.0",
+	"widget": "5.0.0",
+	"date": "2026-10-18",
+	"notes": [
+		"Control Hub replaces Control Panel Helper: the tray part is now Control Hub Service, plus the new Control Hub app window.",
+		"Your settings, logins and backups are copied over automatically.",
+		"Tap play when Spotify is closed: Control Hub starts Spotify in the background and plays.",
+		"New Spotify playlists tile.",
+		"Restore a layout backup from Control Hub → Panel."
+	]
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>tr('Control Panel')</title>
+		<link rel="icon" type="image/svg+xml" href="resources/icon.svg" />
+
+		<meta name="x-icue-property" content="theme" data-label="tr('Theme')" data-type="combobox" data-default="'navy'" data-values="[{'key':'navy','value':tr('Navy')},{'key':'dark','value':tr('Dark')},{'key':'teal','value':tr('Teal')},{'key':'light','value':tr('Light')}]" />
+		<meta name="x-icue-property" content="tileSize" data-label="tr('Tile size')" data-type="combobox" data-default="'large'" data-values="[{'key':'small','value':tr('Small')},{'key':'medium','value':tr('Medium')},{'key':'large','value':tr('Large')},{'key':'huge','value':tr('Extra large')}]" />
+		<meta name="x-icue-property" content="backgroundStyle" data-label="tr('Background')" data-type="combobox" data-default="'lines'" data-values="[{'key':'lines','value':tr('Contour lines')},{'key':'plain','value':tr('Plain')},{'key':'image','value':tr('My image')}]" />
+		<meta name="x-icue-property" content="showEditButton" data-label="tr('Show Edit button')" data-type="switch" data-default="true" />
+		<meta name="x-icue-property" content="clock24h" data-label="tr('24-hour clock')" data-type="switch" data-default="true" />
+		<meta name="x-icue-property" content="onlineLogos" data-label="tr('Load website logos')" data-type="switch" data-default="true" />
+		<meta name="x-icue-property" content="helperPort" data-label="tr('Helper port')" data-type="textfield" data-default="'39812'" />
+
+		<meta name="x-icue-property" content="accentColor" data-label="tr('Accent Color')" data-type="color" data-default="'#2BB3A3'" />
+		<meta name="x-icue-property" content="backgroundMedia" data-label="tr('Background Image')" data-type="media-selector" data-filters="['*.png', '*.jpg', '*.jpeg', '*.webp', '*.gif']" />
+		<meta name="x-icue-property" content="transparency" data-label="tr('Background Transparency')" data-type="slider" data-default="0" data-min="0" data-max="100" data-step="1" data-unit-label="'%'" />
+
+		<meta name="x-icue-property" content="tileStyle" data-label="tr('Tiles')" data-type="combobox" data-default="'solid'" data-values="[{'key':'solid','value':tr('Solid')},{'key':'glass','value':tr('Glass')}]" />
+		<meta name="x-icue-property" content="glassStrength" data-label="tr('Glass effect')" data-type="slider" data-default="50" data-min="0" data-max="100" data-step="5" data-unit-label="'%'" />
+		<meta name="x-icue-property" content="coverAccent" data-label="tr('Accent color from album cover')" data-type="switch" data-default="true" />
+		<meta name="x-icue-property" content="tapSound" data-label="tr('Tap sound')" data-type="switch" data-default="false" />
+		<meta name="x-icue-property" content="nightMode" data-label="tr('Night mode (dim at night)')" data-type="switch" data-default="false" />
+		<meta name="x-icue-property" content="nightStart" data-label="tr('Night starts (HH:MM)')" data-type="textfield" data-default="'22:00'" />
+		<meta name="x-icue-property" content="nightEnd" data-label="tr('Night ends (HH:MM)')" data-type="textfield" data-default="'07:00'" />
+		<meta name="x-icue-property" content="nightDim" data-label="tr('Night dimming')" data-type="slider" data-default="50" data-min="10" data-max="90" data-step="5" data-unit-label="'%'" />
+		<meta name="x-icue-property" content="screensaver" data-label="tr('Screensaver')" data-type="combobox" data-default="'0'" data-values="[{'key':'0','value':tr('Off')},{'key':'2','value':tr('After 2 minutes')},{'key':'5','value':tr('After 5 minutes')},{'key':'10','value':tr('After 10 minutes')},{'key':'15','value':tr('After 15 minutes')},{'key':'30','value':tr('After 30 minutes')},{'key':'60','value':tr('After 1 hour')}]" />
+
+		<script type="application/json" id="x-icue-groups">
+			[
+				{
+					"title": "tr('Control Panel')",
+					"properties": ["theme", "tileSize", "backgroundStyle", "showEditButton", "clock24h", "onlineLogos", "screensaver", "nightMode", "nightStart", "nightEnd", "nightDim", "helperPort"],
+					"info": "tr('Tap Edit on the screen to add, move, resize and remove tiles. Volume, app mixer, power, apps with real icons and PC stats need Control Hub running on your PC.')"
+				},
+				{
+					"title": "tr('Widget Personalization')",
+					"properties": ["accentColor", "coverAccent", "tileStyle", "glassStrength", "backgroundMedia", "transparency", "tapSound"],
+					"info": "tr('Glass tiles look best with your own background image. The screensaver shows a big clock and what is playing; tap to wake.')"
+				}
+			]
+		</script>
+
+		<link rel="stylesheet" href="styles/panel.css" />
+		<link rel="stylesheet" href="styles/fresh.css" />
+	</head>
+	<body>
+		<div id="bg" class="bg"></div>
+		<div id="board" class="board"></div>
+		<nav id="dots" class="dots" hidden="hidden"></nav>
+
+		<div id="topbar" class="topbar">
+			<button type="button" id="editBtn" class="pill">Edit</button>
+			<span id="editTools" class="edit-tools" hidden="hidden">
+				<button type="button" id="hiddenBtn" class="pill" hidden="hidden">Hidden</button>
+				<button type="button" id="pagesBtn" class="pill">Pages</button>
+				<button type="button" id="addBtn" class="pill accent">+ Add tile</button>
+				<button type="button" id="doneBtn" class="pill strong">Done</button>
+			</span>
+		</div>
+
+		<aside id="drawer" class="drawer" hidden="hidden">
+			<div class="drawer-head">
+				<span>Add a tile</span>
+				<button type="button" class="pill" data-close="drawer">Close</button>
+			</div>
+			<div id="drawerBody" class="drawer-body"></div>
+		</aside>
+
+		<div id="modal" class="modal" hidden="hidden">
+			<div class="modal-card">
+				<div class="modal-head">
+					<button type="button" class="icon-btn" id="modalBack" hidden="hidden" aria-label="Back"></button>
+					<span id="modalTitle"></span>
+					<button type="button" class="pill" data-close="modal">Close</button>
+				</div>
+				<div id="modalBody" class="modal-body"></div>
+			</div>
+		</div>
+
+		<div id="warm" class="warm"></div>
+		<div id="dim" class="dim"></div>
+		<div id="saver" class="saver" hidden="hidden"></div>
+		<div id="toast" class="toast" hidden="hidden"></div>
+
+		<script src="scripts/util.js"></script>
+		<script src="scripts/data.js"></script>
+		<script src="scripts/tiles.js"></script>
+		<script src="scripts/buttons.js"></script>
+		<script src="scripts/editor.js"></script>
+		<script src="scripts/pages.js"></script>
+		<script src="scripts/look.js"></script>
+		<script src="scripts/extra.js"></script>
+		<script src="scripts/everyday.js"></script>
+		<script src="scripts/flight.js"></script>
+		<script src="scripts/round6.js"></script>
+		<script src="scripts/round7.js"></script>
+		<script src="scripts/round7b.js"></script>
+		<script src="scripts/round8.js"></script>
+		<script src="scripts/round8b.js"></script>
+		<script src="scripts/round8c.js"></script>
+		<script src="scripts/round9.js"></script>
+		<script src="scripts/round10.js"></script>
+		<script src="scripts/round11.js"></script>
+		<script src="scripts/main.js"></script>
+	</body>
+</html>
