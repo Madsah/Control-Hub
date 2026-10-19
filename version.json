@@ -1,15 +1,14 @@
 {
-  "version": "1.11.2",
+  "version": "1.11.3",
   "service": "3.9.0",
   "hub": "1.7.0",
-  "widget": "5.4.2",
+  "widget": "5.4.3",
   "date": "2026-10-19",
   "notes": [
+    "Panel: the black home pages now fit your panel exactly, so the last column (with Power) no longer falls off.",
     "Panel: the black home pages (Big clock, Centre stage, Music, Flight, Calm) now show up under Edit, then Pages, then Add page.",
     "Panel: five new themes in soft dark colours: Graphite (like the Control Hub app), Slate, Ocean, Forest and Mocha. Edit, then Look, then Theme (or one page's ✏ in Pages).",
     "Control Hub has a new dark grey look and a new Overview: status, updates, a drawing of your panel page, now playing, your last flight and quick actions.",
-    "Real logos on Connections, a new Settings page with your accent colour, and the window remembers its size.",
-    "FlightLine matches the new look, with airline logos on routes and in the logbook.",
-    "Panel weather: DMI's sharper forecast, decimals, feels like, wind and 'Rain in 20 min'."
+    "Real logos on Connections, a new Settings page with your accent colour, and the window remembers its size."
   ]
 }

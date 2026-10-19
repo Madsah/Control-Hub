@@ -83,11 +83,49 @@ var Studio = (function () {
 		] },
 	];
 
+	/* The pages are made for 19 × 5 Medium tiles. Some panels get a column or row more or less (spacing, the Edit button…),
+	   so a column (or row) is taken out of, or added to, the big tiles: the small buttons keep their size and nothing falls off. */
+	function fitAxis(tiles, from, to, horiz) {
+		var X = horiz ? "x" : "y", W = horiz ? "w" : "h", MIN = horiz ? "minW" : "minH", MAX = horiz ? "maxW" : "maxH";
+		function covering(c) { return tiles.filter(function (t) { return t[X] <= c && c < t[X] + t[W]; }); }
+		function def(t) { return (T.types && T.types[t.type]) || {}; }
+		var guard = 0;
+		while (from !== to && guard++ < 40) {
+			var shrink = from > to, best = -1, bestScore = -1;
+			for (var c = 0; c < from; c++) {
+				var cov = covering(c);
+				if (!cov.length) { if (shrink) { best = c; bestScore = 999; break; } continue; }
+				var ok = cov.every(function (t) {
+					var d = def(t);
+					return shrink ? t[W] >= Math.max(horiz ? 3 : 2, (d[MIN] || 1) + 1) : t[W] >= (horiz ? 3 : 2) && t[W] < (d[MAX] || 40);
+				});
+				if (!ok) continue;
+				var score = Math.min.apply(null, cov.map(function (t) { return t[W]; })); // the biggest tiles give or take
+				if (score > bestScore) { bestScore = score; best = c; }
+			}
+			if (best < 0) break;
+			tiles.forEach(function (t) {
+				if (t[X] <= best && best < t[X] + t[W]) t[W] += shrink ? -1 : 1;
+				else if (t[X] > best) t[X] += shrink ? -1 : 1;
+			});
+			from += shrink ? -1 : 1;
+		}
+		// Anything still outside (a very small panel) is left out, rather than lying on top of another tile.
+		for (var i = tiles.length - 1; i >= 0; i--) if (tiles[i][X] + tiles[i][W] > to) tiles.splice(i, 1);
+	}
+
+	function fitted(p) {
+		var tiles = JSON.parse(JSON.stringify(p.tiles)), g = null;
+		try { g = Editor.withGrid("medium", function () { return Editor.gridInfo(); }); } catch (e) {}
+		var cols = g && g.cols ? g.cols : 19, rows = g && g.rows ? g.rows : 5;
+		if (cols !== 19) fitAxis(tiles, 19, cols, true);
+		if (rows !== 5) fitAxis(tiles, 5, rows, false);
+		return { name: p.name.replace("Black · ", ""), theme: "midnight", size: "medium", grid: { cols: cols, rows: rows }, tiles: tiles };
+	}
+
 	function presets() {
 		return BLACK.map(function (p) {
-			return { group: "Black", name: p.name, sub: p.sub, make: function () {
-				return JSON.parse(JSON.stringify({ name: p.name.replace("Black · ", ""), theme: "midnight", size: "medium", grid: { cols: 19, rows: 5 }, tiles: p.tiles }));
-			} };
+			return { group: "Black", name: p.name, sub: p.sub, make: function () { return fitted(p); } };
 		});
 	}
 
