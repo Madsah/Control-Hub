@@ -387,3 +387,74 @@ body.studio .t-spotify .sp-ctl button {
 .wx-detail .wx-tx {
 	min-width: 0;
 }
+
+/* ------------------------------------------------------------------ 5.5: more themes (soft dark colours, like the Control Hub app) */
+body.theme-graphite {
+	--bg: 26, 27, 31;
+	--line: rgba(255, 255, 255, 0.03);
+	--tile: #26272c;
+	--tile-rgb: 38, 39, 44;
+	--tile-2: #313238;
+	--text: #eeeff2;
+	--muted: #989ba4;
+	--track: #3b3d44;
+	--shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 20px -12px rgba(0, 0, 0, 0.7);
+	--panel: #232429;
+	--panel-text: #eeeff2;
+}
+
+body.theme-slate {
+	--bg: 20, 25, 33;
+	--line: rgba(255, 255, 255, 0.03);
+	--tile: #212a36;
+	--tile-rgb: 33, 42, 54;
+	--tile-2: #2b3543;
+	--text: #e9eef5;
+	--muted: #91a0b3;
+	--track: #37445a;
+	--shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 20px -12px rgba(0, 0, 0, 0.7);
+	--panel: #1e2632;
+	--panel-text: #e9eef5;
+}
+
+body.theme-ocean {
+	--bg: 5, 17, 30;
+	--line: rgba(120, 190, 255, 0.04);
+	--tile: #0e2438;
+	--tile-rgb: 14, 36, 56;
+	--tile-2: #15314b;
+	--text: #e7f2fc;
+	--muted: #88a6c2;
+	--track: #21415f;
+	--shadow: 0 0 0 1px rgba(120, 190, 255, 0.07), 0 8px 20px -12px rgba(0, 0, 0, 0.7);
+	--panel: #0c2133;
+	--panel-text: #e7f2fc;
+}
+
+body.theme-forest {
+	--bg: 14, 21, 17;
+	--line: rgba(160, 255, 200, 0.03);
+	--tile: #1b2721;
+	--tile-rgb: 27, 39, 33;
+	--tile-2: #24332b;
+	--text: #eaf3ed;
+	--muted: #92a99b;
+	--track: #31443a;
+	--shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 20px -12px rgba(0, 0, 0, 0.7);
+	--panel: #19241e;
+	--panel-text: #eaf3ed;
+}
+
+body.theme-mocha {
+	--bg: 27, 23, 21;
+	--line: rgba(255, 220, 190, 0.03);
+	--tile: #2b2522;
+	--tile-rgb: 43, 37, 34;
+	--tile-2: #362f2b;
+	--text: #f4ede7;
+	--muted: #a7998d;
+	--track: #483e38;
+	--shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 20px -12px rgba(0, 0, 0, 0.7);
+	--panel: #28221f;
+	--panel-text: #f4ede7;
+}

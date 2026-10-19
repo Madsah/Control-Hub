@@ -14,7 +14,7 @@ var Round8 = (function () {
 	function O() { var l = L(); return l.opts || (l.opts = {}); }
 	function setOpt(k, v) { O()[k] = v; Editor.save(); }
 
-	var THEMES = [["", "Same as all pages"], ["navy", "Navy"], ["dark", "Dark"], ["teal", "Teal"], ["light", "Light"], ["cockpit", "Cockpit"], ["midnight", "Midnight"], ["nordic", "Nordic"], ["neon", "Neon"]];
+	var THEMES = [["", "Same as all pages"], ["navy", "Navy"], ["dark", "Dark"], ["teal", "Teal"], ["light", "Light"], ["cockpit", "Cockpit"], ["midnight", "Midnight"], ["nordic", "Nordic"], ["neon", "Neon"], ["graphite", "Graphite"], ["slate", "Slate"], ["ocean", "Ocean"], ["forest", "Forest"], ["mocha", "Mocha"]];
 	var ALL_THEMES = THEMES.slice(1).map(function (t) { return t[0]; });
 	var COLORS = ["", "#2BB3A3", "#3B82F6", "#5865F2", "#8B5CF6", "#EC4899", "#EF4444", "#F97316", "#F59E0B", "#22C55E", "#1DB954", "#64748B"];
 
