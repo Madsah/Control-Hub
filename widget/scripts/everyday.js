@@ -91,26 +91,76 @@ var Everyday = (function () {
 		edit: function (t, back) { pickCity(t, back); },
 		build: function (ctx) {
 			var cfg = ctx.tile.cfg || {};
-			ctx.body.innerHTML = '<div class="wx-now"><span class="wx-ic"></span><div class="wx-tx"><b class="wx-t"></b><span class="wx-s"></span></div></div><div class="wx-days"></div>';
-			var ic = ctx.body.querySelector(".wx-ic"), tEl = ctx.body.querySelector(".wx-t"), sEl = ctx.body.querySelector(".wx-s"), days = ctx.body.querySelector(".wx-days");
-			var url = "https://api.open-meteo.com/v1/forecast?latitude=" + (+cfg.lat).toFixed(3) + "&longitude=" + (+cfg.lon).toFixed(3) +
-				"&current=temperature_2m,weather_code,is_day,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&wind_speed_unit=ms&timezone=auto&forecast_days=6" +
-				(cfg.fc === "hours" ? "&hourly=temperature_2m,weather_code,precipitation_probability,is_day&forecast_hours=12" : "");
+			ctx.body.innerHTML = '<div class="wx-now"><span class="wx-ic"></span><div class="wx-tx"><b class="wx-t"></b><span class="wx-s"></span><span class="wx-more"></span></div></div><div class="wx-days"></div>';
+			var ic = ctx.body.querySelector(".wx-ic"), tEl = ctx.body.querySelector(".wx-t"), sEl = ctx.body.querySelector(".wx-s"), more = ctx.body.querySelector(".wx-more"), days = ctx.body.querySelector(".wx-days");
+			var lat = +cfg.lat, lon = +cfg.lon;
+			// DMI's own 2 km model (HARMONIE) where it covers (Northern and Central Europe), the normal best forecast elsewhere.
+			var model = cfg.model === "best" ? "" : cfg.model === "dmi" || (lat > 47 && lat < 72 && lon > -25 && lon < 40) ? "&models=dmi_seamless" : "";
+			var decimals = cfg.decimals !== false, details = cfg.details !== false;
+			var url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat.toFixed(4) + "&longitude=" + lon.toFixed(4) +
+				"&current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation" +
+				"&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum" +
+				"&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,is_day&forecast_hours=12" +
+				"&minutely_15=precipitation&forecast_minutely_15=8" +
+				"&wind_speed_unit=ms&timezone=auto&forecast_days=6";
+			var plain = url;
+			url += model;
+			// If the sharper forecast doesn't answer (or says no), the plain one is used.
+			function load() {
+				return getText(url).then(JSON.parse).then(function (d) {
+					if (!d || d.error || !d.current) throw new Error("no");
+					return d;
+				}).catch(function () {
+					return getText(plain.replace("&minutely_15=precipitation&forecast_minutely_15=8", "")).then(JSON.parse);
+				});
+			}
 			ctx.node.classList.toggle("wx-hours", cfg.fc === "hours");
+			ctx.node.classList.toggle("wx-detail", details && (ctx.h > 1 || ctx.w > 2));
+			function deg(v) { return v == null ? "–" : (decimals ? (Math.round(v * 10) / 10).toFixed(1) : String(Math.round(v))).replace("-", "−") + "°"; }
+			function compass(d) { return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((d % 360) + 360) % 360 / 45) % 8]; }
+			/* Rain in the next hour, from the 15-minute forecast (or the hourly one). */
+			function nextHour(d) {
+				var q = d.minutely_15 && d.minutely_15.precipitation, now = d.current && d.current.precipitation;
+				var steps = [];
+				if (q && q.length && q.some(function (x) { return x != null; })) {
+					steps = q.slice(0, 4).map(function (x) { return +x || 0; }); // the next four 15-minute steps, from now
+				} else if (d.hourly && d.hourly.precipitation) {
+					var h0 = +d.hourly.precipitation[0] || 0, h1 = +d.hourly.precipitation[1] || 0;
+					steps = [h0 / 4, h0 / 4, h1 / 4, h1 / 4];
+				}
+				if (!steps.length) return "";
+				var wet = function (x) { return x >= 0.05; };
+				if ((now || 0) >= 0.1 || wet(steps[0])) {
+					for (var k = 1; k < steps.length; k++) if (!wet(steps[k])) return "Rain stops in " + k * 15 + " min";
+					return "Rain the next hour";
+				}
+				for (var j = 1; j < steps.length; j++) if (wet(steps[j])) return "Rain in " + j * 15 + " min";
+				return "Dry the next hour";
+			}
 			return function () {
-				var c = cached("wx:" + url, 15 * 60000, function () { return getText(url).then(JSON.parse); });
+				var c = cached("wx:" + url, 10 * 60000, load);
 				var d = c.data;
 				if (!d || !d.current) {
 					setHtml(ic, svg("partly"));
 					setText(tEl, c.err ? "--" : "…");
 					setText(sEl, c.err ? "Couldn't get the weather" : cfg.name || "");
+					setText(more, "");
 					return;
 				}
 				var w = wmo(d.current.weather_code, !d.current.is_day);
 				setHtml(ic, svg(w.icon));
-				setText(tEl, Math.round(d.current.temperature_2m) + "°");
+				setText(tEl, deg(d.current.temperature_2m));
 				var today = d.daily ? Math.round(d.daily.temperature_2m_max[0]) + "° / " + Math.round(d.daily.temperature_2m_min[0]) + "°" : "";
 				setText(sEl, ctx.w === 1 ? (cfg.name || "") : (cfg.name || "") + " · " + w.text + (ctx.h > 1 || ctx.w > 2 ? "" : " · " + today));
+				if (details && (ctx.h > 1 || ctx.w > 2)) {
+					var parts = [];
+					if (d.current.apparent_temperature != null) parts.push("Feels " + deg(d.current.apparent_temperature));
+					if (d.current.wind_speed_10m != null) parts.push("Wind " + Math.round(d.current.wind_speed_10m) + (d.current.wind_gusts_10m > d.current.wind_speed_10m + 3 ? "–" + Math.round(d.current.wind_gusts_10m) : "") + " m/s " + compass(+d.current.wind_direction_10m || 0));
+					var rain = nextHour(d);
+					if (rain) parts.push(rain);
+					setText(more, parts.join(" · "));
+					more.classList.toggle("wet", /^Rain/.test(rain));
+				} else setText(more, "");
 				var n = ctx.w >= 3 ? Math.min(5, ctx.w + 1) : ctx.h > 1 ? 3 : 0;
 				var html = "", hoursDone = false;
 				if (cfg.fc === "hours" && d.hourly && d.hourly.time) {
@@ -118,8 +168,10 @@ var Everyday = (function () {
 					var hn = ctx.w >= 4 ? 6 : n;
 					for (var k = 0; k < hn && k < d.hourly.time.length; k++) {
 						var hw = wmo(d.hourly.weather_code[k], d.hourly.is_day ? !d.hourly.is_day[k] : false);
+						var mm = d.hourly.precipitation ? +d.hourly.precipitation[k] || 0 : 0;
 						var hr = d.hourly.precipitation_probability ? d.hourly.precipitation_probability[k] : null;
-						html += '<div class="wx-day"><span>' + (k === 0 ? "Now" : d.hourly.time[k].slice(11, 13)) + "</span>" + svg(hw.icon) + "<b>" + Math.round(d.hourly.temperature_2m[k]) + "°</b><em>" + (hr != null && hr >= 30 ? hr + "%" : "&nbsp;") + "</em></div>";
+						html += '<div class="wx-day"><span>' + (k === 0 ? "Now" : d.hourly.time[k].slice(11, 13)) + "</span>" + svg(hw.icon) + "<b>" + deg(d.hourly.temperature_2m[k]) + "</b><em>" +
+							(mm >= 0.1 ? mm.toFixed(1) + " mm" : hr != null && hr >= 30 ? hr + "%" : "&nbsp;") + "</em></div>";
 					}
 					n = hn;
 					hoursDone = !!html;
@@ -127,8 +179,10 @@ var Everyday = (function () {
 				for (var i = 0; !hoursDone && d.daily && i < n; i++) {
 					var dw = wmo(d.daily.weather_code[i]);
 					var lab = i === 0 ? "Today" : new Date(d.daily.time[i] + "T12:00").toLocaleDateString("en-GB", { weekday: "short" });
-					var rain = d.daily.precipitation_probability_max ? d.daily.precipitation_probability_max[i] : null;
-					html += '<div class="wx-day"><span>' + lab + "</span>" + svg(dw.icon) + "<b>" + Math.round(d.daily.temperature_2m_max[i]) + "°</b><em>" + Math.round(d.daily.temperature_2m_min[i]) + "°" + (rain != null && rain >= 30 ? " · " + rain + "%" : "") + "</em></div>";
+					var rp = d.daily.precipitation_probability_max ? d.daily.precipitation_probability_max[i] : null;
+					var sum = d.daily.precipitation_sum ? +d.daily.precipitation_sum[i] || 0 : 0;
+					html += '<div class="wx-day"><span>' + lab + "</span>" + svg(dw.icon) + "<b>" + Math.round(d.daily.temperature_2m_max[i]) + "°</b><em>" + Math.round(d.daily.temperature_2m_min[i]) + "°" +
+						(sum >= 1 ? " · " + Math.round(sum) + " mm" : rp != null && rp >= 30 ? " · " + rp + "%" : "") + "</em></div>";
 				}
 				setHtml(days, html);
 				days.style.display = n ? "" : "none";
@@ -139,15 +193,23 @@ var Everyday = (function () {
 	function pickCity(t, back) {
 		var wrap = el("div", "opts");
 		Editor.modal("Weather: choose your city", wrap, back);
-		var fc = (t.cfg && t.cfg.fc) || "days";
-		wrap.innerHTML = '<div class="chips wx-fc"><button class="chip' + (fc === "days" ? " on" : "") + '" data-fc="days">Next days</button><button class="chip' + (fc === "hours" ? " on" : "") + '" data-fc="hours">Next hours</button></div><div class="pick-bar"><input class="search" placeholder="Type a city, e.g. Aarhus" /><button class="pill accent">Search</button></div><div class="opt-list"></div>';
+		var c0 = t.cfg || {}, fc = c0.fc || "days", md = c0.model || "auto";
+		function chip(k, v, label, on) { return '<button class="chip' + (on ? " on" : "") + '" data-k="' + k + '" data-v="' + v + '">' + label + "</button>"; }
+		wrap.innerHTML = '<div class="chips wx-fc">' + chip("fc", "days", "Next days", fc === "days") + chip("fc", "hours", "Next hours", fc === "hours") + "</div>" +
+			'<div class="chips wx-fc">' + chip("decimals", "1", "11.4°", c0.decimals !== false) + chip("decimals", "0", "11°", c0.decimals === false) +
+			chip("details", "1", "Feels like, wind and rain", c0.details !== false) + chip("details", "0", "Just the temperature", c0.details === false) + "</div>" +
+			'<div class="chips wx-fc">' + chip("model", "auto", "DMI forecast in Northern Europe (sharpest)", md === "auto") + chip("model", "best", "Standard forecast", md === "best") + "</div>" +
+			'<p class="hint">Search for your town (or a nearby place) for the most precise weather.</p><div class="pick-bar"><input class="search" placeholder="Type a city, e.g. Aarhus" /><button class="pill accent">Search</button></div><div class="opt-list"></div>';
 		var input = wrap.querySelector("input"), list = wrap.querySelector(".opt-list");
-		wrap.querySelector(".wx-fc").addEventListener("click", function (e) {
-			var b = e.target.closest("[data-fc]");
-			if (!b) return;
-			t.cfg = t.cfg || {};
-			t.cfg.fc = b.dataset.fc;
-			Editor.saveTile(t, function () { pickCity(t, back); });
+		wrap.querySelectorAll(".wx-fc").forEach(function (row) {
+			row.addEventListener("click", function (e) {
+				var b = e.target.closest("[data-k]");
+				if (!b) return;
+				t.cfg = t.cfg || {};
+				var k = b.dataset.k, v = b.dataset.v;
+				t.cfg[k] = k === "decimals" || k === "details" ? v === "1" : v;
+				Editor.saveTile(t, function () { pickCity(t, back); });
+			});
 		});
 		input.value = (t.cfg && t.cfg.name) || "";
 		function search() {
@@ -161,7 +223,8 @@ var Everyday = (function () {
 					b.querySelector("b").textContent = p.name;
 					b.querySelector("em").textContent = [p.admin1, p.country].filter(Boolean).join(", ");
 					b.addEventListener("click", function () {
-						t.cfg = { name: p.name, lat: p.latitude, lon: p.longitude, fc: (t.cfg && t.cfg.fc) || undefined };
+						var keep = t.cfg || {};
+						t.cfg = { name: p.name, lat: p.latitude, lon: p.longitude, fc: keep.fc, decimals: keep.decimals, details: keep.details, model: keep.model };
 						Editor.saveTile(t, back);
 					});
 					list.appendChild(b);

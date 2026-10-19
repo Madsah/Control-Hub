@@ -39,6 +39,31 @@ function gradeBadge(g) { return g ? '<span class="grade ' + gradeClass(g) + '">'
 /* "Airbus A320neo Asobo Air France" → shorter, without the maker's studio. */
 function acName(t) { return String(t || "Unknown aircraft").replace(/\s+(Asobo|Microsoft|iniBuilds|PMDG|Fenix|FBW|Headwind)\b/i, "").trim(); }
 
+/* Logos: airlines by their ICAO code (SAS, DLH…) and websites. A logo that doesn't load just disappears. */
+function airlineLogo(code) {
+	code = String(code || "").toUpperCase();
+	return /^[A-Z]{3}$/.test(code) ? '<img class="al-logo" alt="" loading="lazy" src="https://www.flightaware.com/images/airline_logos/90p/' + code + '.png" onerror="this.remove()">' : "";
+}
+function siteLogo(domain, cls) {
+	return '<img class="' + (cls || "sb-logo") + '" alt="" src="https://www.google.com/s2/favicons?sz=64&domain=' + encodeURIComponent(domain) + '" onerror="this.remove()">';
+}
+function flightAirline(f) { const m = /^([A-Z]{3})\d/.exec(String(f.flightNo || "").toUpperCase()); return m ? m[1] : ""; }
+
+/* The same accent colour as Control Hub and the panel. */
+function useAccent(hex) {
+	if (!/^#[0-9a-f]{6}$/i.test(hex || "")) return;
+	const v = parseInt(hex.slice(1), 16), r = v >> 16, g = (v >> 8) & 255, b = v & 255;
+	const s = document.documentElement.style;
+	s.setProperty("--acc", hex);
+	s.setProperty("--acc-ink", 0.2126 * r + 0.7152 * g + 0.0722 * b > 140 ? "#101114" : "#ffffff");
+}
+setTimeout(async () => {
+	try {
+		const s = await get("/api/hub/status");
+		useAccent(s.hubAccent && s.hubAccent !== "panel" ? s.hubAccent : s.panelAccent);
+	} catch (e) {}
+}, 0);
+
 async function get(path) {
 	const r = await fetch(path, { cache: "no-store" });
 	if (!r.ok) throw new Error(path + " " + r.status);
@@ -157,7 +182,7 @@ function fillRows() {
 	const list = flights.filter(f => !q || [from(f), to(f), f.aircraft, f.planFrom, f.planTo, f.flightNo].join(" ").toLowerCase().includes(q));
 	$("#rows").innerHTML = list.map(f =>
 		'<tr data-id="' + esc(f.id) + '"><td><div>' + esc(day(f.start)) + '</div><div class="muted">' + clock(f.start) + "</div></td>" +
-		'<td class="route"><b>' + esc(from(f)) + '</b><span class="arr">→</span><b>' + esc(to(f)) + "</b>" +
+		'<td class="route">' + airlineLogo(flightAirline(f)) + '<b>' + esc(from(f)) + '</b><span class="arr">→</span><b>' + esc(to(f)) + "</b>" +
 		(f.complete === false ? '<span class="tag warn">Unfinished</span>' : "") + (f.imported ? '<span class="tag">Old log</span>' : "") + "</td>" +
 		'<td class="ac">' + esc(acName(f.aircraft)) + "</td>" +
 		'<td class="r num">' + dur(f.blockMin) + "</td>" +

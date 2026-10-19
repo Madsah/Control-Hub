@@ -232,7 +232,8 @@ const Finder = (function () {
 
 	function card(f, i) {
 		const flights = (f.flights || []).slice(0, 3);
-		const lines = (f.airlines || []).slice(0, 2).map(a => esc(a.name)).join(", ") + ((f.airlines || []).length > 2 ? " +" + (f.airlines.length - 2) : "");
+		const logos = (f.airlines || []).slice(0, 3).map(a => airlineLogo(a.code)).join("");
+		const lines = (logos ? '<span class="al-logos">' + logos + "</span>" : "") + (f.airlines || []).slice(0, 2).map(a => esc(a.name)).join(", ") + ((f.airlines || []).length > 2 ? " +" + (f.airlines.length - 2) : "");
 		return '<div class="fcard" data-i="' + i + '">' +
 			'<div class="fc-head"><span class="fc-code">' + esc(f.icao) + '</span><span class="fc-flag">' + FLAG(f.country) + '</span><span class="grow"></span>' +
 			(f.scenery ? '<span class="tag mine" title="' + esc(f.scenery.title) + '">Your scenery</span>' : "") +
@@ -244,7 +245,7 @@ const Finder = (function () {
 			(f.deal ? '<a class="fc-deal" href="#" data-url="' + esc(f.deal.url) + '"><span class="tag sale">−' + f.deal.pct + "%</span> scenery " + money(f.deal.price, f.deal.currency) +
 				' <s class="muted">' + money(f.deal.was, f.deal.currency) + "</s> · " + esc(f.deal.store) + "</a>" : "") +
 			'<div class="fc-flights">' + flights.map(c => '<button class="chip" data-sb="' + i + '" data-flight="' + esc(c) + '" title="Plan this flight number in SimBrief">' + esc(c) + "</button>").join("") + "</div>" +
-			'<button class="btn accent fc-send" data-sb="' + i + '" data-flight="' + esc(flights[0] || "") + '">Send to SimBrief</button></div>';
+			'<button class="btn accent fc-send" data-sb="' + i + '" data-flight="' + esc(flights[0] || "") + '">' + siteLogo("simbrief.com") + 'Send to SimBrief</button></div>';
 	}
 
 	/* SimBrief with departure, destination, aircraft type and the flight number filled in. */

@@ -1,12 +1,13 @@
 {
-  "version": "1.10.0",
-  "service": "3.8.1",
-  "hub": "1.6.0",
-  "widget": "5.3.0",
+  "version": "1.11.0",
+  "service": "3.9.0",
+  "hub": "1.7.0",
+  "widget": "5.4.0",
   "date": "2026-10-19",
   "notes": [
-    "Panel: new Studio look, with the album cover behind Spotify, bigger Discord people that glow when they talk, and thick volume sliders.",
-    "Panel: five new black home pages (Edit, then Pages, then New page, then Black).",
-    "Panel: a 'Big and thin' clock style, a weather 'Next hours' option and your own accent colour (Edit, then Look)."
+    "Control Hub has a new dark grey look and a new Overview: status, updates, a drawing of your panel page, now playing, your last flight and quick actions.",
+    "Real logos on Connections, a new Settings page with your accent colour, and the window remembers its size.",
+    "FlightLine matches the new look, with airline logos on routes and in the logbook.",
+    "Panel weather: DMI's sharper forecast, decimals, feels like, wind and 'Rain in 20 min'."
   ]
 }

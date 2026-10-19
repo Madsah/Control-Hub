@@ -369,6 +369,13 @@ namespace ControlPanelHelper
             d["panelAccent"] = panelAccent;
             d["panelPage"] = panelPage;
             d["panelPageName"] = panelPageName;
+            // The accent colour picked in the Control Hub app (Settings), or "panel" to follow the panel's.
+            try
+            {
+                string lf = Path.Combine(Settings.Folder, "hub-look.txt");
+                d["hubAccent"] = File.Exists(lf) ? File.ReadAllText(lf).Trim() : "panel";
+            }
+            catch { d["hubAccent"] = "panel"; }
             object wv;
             d["widgetVersion"] = WidgetVersion().TryGetValue("version", out wv) ? wv : null;
 

@@ -364,3 +364,26 @@ body.studio .t-mic .th-val {
 body.studio .t-spotify .sp-ctl button {
 	flex: 0 0 auto;
 }
+
+/* ------------------------------------------------------------------ weather details (all looks) */
+.wx-more {
+	display: none;
+	color: var(--muted);
+	font-size: max(11px, calc(var(--cell) * 0.105));
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin-top: 0.3em;
+}
+
+.wx-detail .wx-more:not(:empty) {
+	display: block;
+}
+
+.wx-more.wet {
+	color: #60a5fa;
+}
+
+.wx-detail .wx-tx {
+	min-width: 0;
+}

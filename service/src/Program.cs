@@ -12,7 +12,7 @@ namespace ControlPanelHelper
 {
     static class Program
     {
-        public const string Version = "3.8.1";
+        public const string Version = "3.9.0";
         public const string AppName = "Control Hub Service";
         /// <summary>The old helper was set to start with Windows (so this service takes that over).</summary>
         public static bool HadOldAutostart;
