@@ -1,0 +1,366 @@
+/* Control Panel — Studio look (5.3). Only with body.studio (Edit → Look → Style → Studio),
+ * except the "Big and thin" clock, which you pick on the tile itself. */
+
+/* ------------------------------------------------------------------ Midnight: true black, thin edges */
+body.studio.theme-midnight {
+	--bg: 0, 0, 0;
+	--tile: #08080a;
+	--tile-rgb: 8, 8, 10;
+	--tile-2: #16161a;
+	--track: #222228;
+	--muted: #8a8a94;
+}
+
+body.studio.theme-midnight .tile {
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 40%);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.075), 0 8px 22px -12px rgba(0, 0, 0, 0.9);
+}
+
+body.studio .tile {
+	border-radius: calc(var(--cell) * 0.2);
+}
+
+/* A tap gives a short glow in the accent colour. */
+body.studio:not(.editing) .tile.press:active {
+	box-shadow: inset 0 0 0 1.5px rgba(var(--accent-rgb), 0.7), 0 0 26px -2px rgba(var(--accent-rgb), 0.45);
+}
+
+/* ------------------------------------------------------------------ app buttons */
+body.studio .t-shortcut .logo {
+	width: calc(var(--u) * 0.54);
+	height: calc(var(--u) * 0.54);
+	filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+body.studio .t-shortcut .sc .nm {
+	font-weight: 500;
+	letter-spacing: 0.005em;
+}
+
+body.studio .tile.sc-noname .sc .logo {
+	width: calc(var(--u) * 0.62);
+	height: calc(var(--u) * 0.62);
+}
+
+/* A long name gets smaller letters before it's left out (all looks). */
+.tile.sc-tight .sc .nm {
+	font-size: max(11px, calc(var(--cell) * 0.112));
+	letter-spacing: -0.01em;
+}
+
+/* ------------------------------------------------------------------ Spotify: the cover fills the tile */
+.sp-bg {
+	display: none;
+}
+
+body.studio .t-spotify.sp-has-art .sp-bg {
+	display: block;
+	position: absolute;
+	inset: -30%;
+	background: center / cover no-repeat;
+	filter: blur(34px) saturate(1.5) brightness(0.42);
+	transform: translateZ(0);
+	pointer-events: none;
+}
+
+body.studio .t-spotify.sp-has-art .tile-in {
+	z-index: 1;
+	color: #fff;
+}
+
+body.studio .t-spotify.sp-has-art .sp-a,
+body.studio .t-spotify.sp-has-art .sp-q {
+	color: rgba(255, 255, 255, 0.72);
+}
+
+body.studio .t-spotify.sp-has-art .sp-q b,
+body.studio .t-spotify.sp-has-art .sp-q h5 {
+	color: #fff;
+}
+
+body.studio .t-spotify.sp-has-art .sp-ctl button {
+	color: #fff;
+}
+
+body.studio .t-spotify.sp-has-art .sp-ctl .sp-sm:not(.on) {
+	color: rgba(255, 255, 255, 0.7);
+}
+
+body.studio .t-spotify.sp-has-art .sp-prog {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+body.studio .t-spotify .sp-art {
+	border-radius: calc(var(--cell) * 0.1);
+	box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
+}
+
+body.studio .t-spotify .sp-t {
+	font-size: max(15px, calc(var(--u) * 0.075));
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+body.studio .t-spotify .sp-a {
+	font-size: max(12px, calc(var(--u) * 0.045));
+}
+
+body.studio .t-spotify .sp-prog {
+	height: 5px;
+}
+
+body.studio .t-spotify .sp-prog i {
+	background: #fff;
+}
+
+body.studio .t-spotify:not(.sp-has-art) .sp-prog i {
+	background: #1db954;
+}
+
+/* Big player: the cover on the left as high as the tile, everything else to the right. */
+body.studio .t-spotify.sp-big .sp {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	grid-template-rows: auto auto auto minmax(0, 1fr);
+	column-gap: calc(var(--cell) * 0.2);
+	row-gap: calc(var(--cell) * 0.09);
+}
+
+body.studio .t-spotify.sp-big .sp-top {
+	display: contents;
+}
+
+body.studio .t-spotify.sp-big .sp-art {
+	grid-column: 1;
+	grid-row: 1 / -1;
+	height: 100%;
+	width: auto;
+	aspect-ratio: 1;
+	max-width: 46vw;
+	align-self: stretch;
+}
+
+body.studio .t-spotify.sp-big .sp-tx {
+	grid-column: 2;
+	grid-row: 1;
+	padding-top: calc(var(--cell) * 0.06);
+}
+
+body.studio .t-spotify.sp-big .sp-prog {
+	grid-column: 2;
+	grid-row: 2;
+}
+
+body.studio .t-spotify.sp-big .sp-ctl {
+	grid-column: 2;
+	grid-row: 3;
+	justify-content: flex-start;
+	gap: calc(var(--cell) * 0.1);
+}
+
+body.studio .t-spotify.sp-big .sp-ctl .sp-play {
+	width: max(44px, calc(var(--u) * 0.15));
+	height: max(44px, calc(var(--u) * 0.15));
+	font-size: max(20px, calc(var(--u) * 0.06));
+	box-shadow: 0 6px 18px -4px rgba(29, 185, 84, 0.6);
+}
+
+body.studio .t-spotify.sp-has-art.sp-big .sp-ctl .sp-play {
+	background: #fff;
+	color: #000;
+	box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.6);
+}
+
+body.studio .t-spotify.sp-big .sp-q {
+	grid-column: 2;
+	grid-row: 4;
+	font-size: max(12px, calc(var(--cell) * 0.12));
+	line-height: 1.45;
+}
+
+/* ------------------------------------------------------------------ Discord: bigger people, a glow while talking */
+body.studio .dc-ready.dc-incall .dc-people {
+	justify-content: center;
+	align-content: center;
+	gap: calc(var(--u) * 0.05) calc(var(--u) * 0.06);
+}
+
+body.studio .t-discord .dc-p {
+	width: calc(var(--u) * 0.3);
+}
+
+body.studio .t-discord .dc-av {
+	width: calc(var(--u) * 0.24);
+	height: calc(var(--u) * 0.24);
+	font-size: calc(var(--u) * 0.1);
+	font-weight: 700;
+}
+
+body.studio .t-discord .dc-p em {
+	font-size: max(11px, calc(var(--u) * 0.042));
+}
+
+body.studio .t-discord .dc-st {
+	top: calc(var(--u) * 0.17);
+	right: calc(var(--u) * 0.03);
+	font-size: max(12px, calc(var(--u) * 0.045));
+}
+
+body.studio .dc-p.speaking .dc-av {
+	box-shadow: 0 0 0 3px var(--tile), 0 0 0 6px #23a55a, 0 0 28px 6px rgba(35, 165, 90, 0.55);
+	animation: studio-talk 1.2s ease-in-out infinite;
+}
+
+@keyframes studio-talk {
+	50% {
+		box-shadow: 0 0 0 3px var(--tile), 0 0 0 6px #23a55a, 0 0 16px 2px rgba(35, 165, 90, 0.35);
+	}
+}
+
+body.studio.no-pulse .dc-p.speaking .dc-av {
+	animation: none;
+}
+
+body.studio .t-discord .dc {
+	height: calc(var(--cell) * 0.5);
+	gap: calc(var(--cell) * 0.06);
+}
+
+body.studio .t-discord .dc-btn:not(.on):not(.dc-open) {
+	background: rgba(255, 255, 255, 0.06);
+}
+
+body.studio.theme-light .t-discord .dc-btn:not(.on):not(.dc-open),
+body.studio.theme-nordic .t-discord .dc-btn:not(.on):not(.dc-open) {
+	background: var(--tile-2);
+}
+
+body.studio .t-discord .dc-btn {
+	flex-direction: row;
+	gap: 0.45em;
+	border-radius: 99px;
+}
+
+body.studio .t-discord .dc-open {
+	aspect-ratio: auto;
+	width: calc(var(--cell) * 0.7);
+}
+
+/* ------------------------------------------------------------------ the "Big and thin" clock (all looks) */
+.clock-big {
+	align-items: center;
+	padding-left: 0;
+}
+
+.clock-big.align-left {
+	align-items: flex-start;
+	padding-left: calc(var(--cell) * 0.1);
+}
+
+.clock-big .c-time {
+	font-size: max(28px, calc(var(--u) * 0.56));
+	font-weight: 300;
+	letter-spacing: -0.035em;
+	line-height: 0.95;
+}
+
+.clock-big .c-time small {
+	font-weight: 500;
+	letter-spacing: 0;
+}
+
+.clock-big .c-date {
+	margin-top: 0.5em;
+	font-size: max(12px, calc(var(--u) * 0.075));
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--accent);
+}
+
+/* ------------------------------------------------------------------ weather */
+body.studio .t-weather .wx-ic {
+	font-size: calc(var(--cell) * 0.6);
+}
+
+body.studio .t-weather .wx-t {
+	font-weight: 300;
+	font-size: max(22px, calc(var(--cell) * 0.46));
+	letter-spacing: -0.02em;
+}
+
+body.studio .t-weather .wx-day b {
+	font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ thick volume sliders (drag anywhere on the bar) */
+body.studio .vol-h .slider:not(.vert),
+body.studio .t-speakers .slider,
+body.studio .t-mic .slider {
+	height: max(30px, calc(var(--cell) * 0.32));
+}
+
+body.studio .vol-h .slider:not(.vert) .track,
+body.studio .t-speakers .slider .track,
+body.studio .t-mic .slider .track {
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	height: auto;
+	transform: none;
+	border-radius: calc(var(--cell) * 0.11);
+	background: rgba(255, 255, 255, 0.07);
+	overflow: hidden;
+}
+
+body.studio.theme-light .t-speakers .slider .track,
+body.studio.theme-light .t-mic .slider .track,
+body.studio.theme-light .vol-h .slider .track,
+body.studio.theme-nordic .t-speakers .slider .track,
+body.studio.theme-nordic .t-mic .slider .track,
+body.studio.theme-nordic .vol-h .slider .track {
+	background: var(--track);
+}
+
+body.studio .vol-h .slider:not(.vert) .fill,
+body.studio .t-speakers .slider .fill,
+body.studio .t-mic .slider .fill {
+	border-radius: 0;
+	background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.75), rgb(var(--accent-rgb)));
+	box-shadow: none;
+}
+
+body.studio .vol-h .slider:not(.vert) .knob,
+body.studio .t-speakers .slider .knob,
+body.studio .t-mic .slider .knob {
+	width: 4px;
+	height: 46%;
+	border: 0;
+	border-radius: 2px;
+	background: rgba(255, 255, 255, 0.9);
+	box-shadow: none;
+	transform: translate(calc(-100% - 7px), -50%);
+}
+
+body.studio .slider:active .knob {
+	box-shadow: none !important;
+}
+
+body.studio .muted .slider .fill {
+	background: var(--muted);
+}
+
+body.studio .vt-ic {
+	background: rgba(255, 255, 255, 0.07);
+}
+
+body.studio .vt-val,
+body.studio .t-speakers .th-val,
+body.studio .t-mic .th-val {
+	font-weight: 700;
+}
+
+body.studio .t-spotify .sp-ctl button {
+	flex: 0 0 auto;
+}

@@ -140,8 +140,10 @@ var T = (function () {
 		if (mode === "hide" || mode === "show") return;
 		requestAnimationFrame(function () {
 			if (!nm.parentNode || !nm.clientWidth) return;
-			var cut = nm.scrollWidth > nm.clientWidth + 1 || wrap.scrollHeight > wrap.parentNode.clientHeight + 1;
-			if (cut) node.classList.add("sc-noname");
+			function cut() { return nm.scrollWidth > nm.clientWidth + 1 || wrap.scrollHeight > wrap.parentNode.clientHeight + 1; }
+			if (!cut()) return;
+			node.classList.add("sc-tight"); // try smaller letters first ("Task Manager")
+			if (cut()) { node.classList.remove("sc-tight"); node.classList.add("sc-noname"); }
 		});
 	}
 
@@ -903,7 +905,7 @@ var T = (function () {
 		w: 2, h: 1, minW: 1, minH: 1, maxW: 6, maxH: 3,
 		options: function () {
 			return [
-				{ key: "style", label: "Style", type: "choice", "default": "digital", choices: [{ value: "digital", label: "Digital" }, { value: "flip", label: "Flip clock" }, { value: "analog", label: "Analogue" }, { value: "board", label: "Airport board" }] },
+				{ key: "style", label: "Style", type: "choice", "default": "digital", choices: [{ value: "digital", label: "Digital" }, { value: "flip", label: "Flip clock" }, { value: "big", label: "Big and thin" }, { value: "analog", label: "Analogue" }, { value: "board", label: "Airport board" }] },
 				{ key: "align", label: "Position", type: "choice", "default": "center", choices: [{ value: "center", label: "Centered" }, { value: "left", label: "Left" }] },
 				{ key: "format", label: "Hours", type: "choice", "default": "auto", choices: [{ value: "auto", label: "Like iCUE setting" }, { value: "24", label: "24-hour" }, { value: "12", label: "12-hour (AM/PM)" }] },
 				{ key: "seconds", label: "Seconds", type: "toggle", "default": false, on: "Show seconds", off: "No seconds" },
@@ -946,7 +948,7 @@ var T = (function () {
 					setText(fd, n.toLocaleDateString("en-GB", ctx.w > 1 && cfg.date !== "short" ? { weekday: "long", day: "numeric", month: "long" } : { weekday: "short", day: "numeric", month: "short" }));
 				};
 			}
-			ctx.body.innerHTML = '<div class="clock align-' + (cfg.align || "center") + '"><b class="c-time"></b><span class="c-date"></span></div>';
+			ctx.body.innerHTML = '<div class="clock' + (style === "big" ? " clock-big" : "") + ' align-' + (cfg.align || "center") + '"><b class="c-time"></b><span class="c-date"></span></div>';
 			var t = ctx.body.querySelector(".c-time"), d = ctx.body.querySelector(".c-date");
 			if (cfg.date === "none") d.style.display = "none";
 			return function () {

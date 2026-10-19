@@ -1,12 +1,12 @@
 {
-  "version": "1.9.2",
+  "version": "1.10.0",
   "service": "3.8.1",
   "hub": "1.6.0",
-  "widget": "5.2.3",
-  "date": "2026-10-18",
+  "widget": "5.3.0",
+  "date": "2026-10-19",
   "notes": [
-    "FlightLine opens as a proper window in the middle of the screen, instead of a small phone-like one.",
-    "In a narrow FlightLine window, the menu shows its icons instead of disappearing.",
-    "From 1.9.1: the map uses OpenStreetMap (no key needed), turned dark."
+    "Panel: new Studio look, with the album cover behind Spotify, bigger Discord people that glow when they talk, and thick volume sliders.",
+    "Panel: five new black home pages (Edit, then Pages, then New page, then Black).",
+    "Panel: a 'Big and thin' clock style, a weather 'Next hours' option and your own accent colour (Edit, then Look)."
   ]
 }

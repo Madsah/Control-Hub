@@ -277,6 +277,10 @@ var Round6 = (function () {
 			var q = function (c) { return ctx.body.querySelector(c); };
 			var art = q(".sp-art"), t = q(".sp-t"), a = q(".sp-a"), dv = q(".sp-d"), prog = q(".sp-prog i"), play = q(".sp-play"), rep = q('[data-a="repeat"]'), like = q(".sp-like"), off = q(".sp-off"), queue = q(".sp-q");
 			var shownImg = null;
+			// Studio look: the album cover, blurred, behind the whole tile.
+			var spBg = U.el("span", "sp-bg");
+			ctx.node.insertBefore(spBg, ctx.node.firstChild);
+			ctx.node.classList.toggle("sp-big", ctx.h >= 2 && ctx.w >= ctx.h * 2); // wide enough for the cover on the left
 			ctx.body.querySelector(".sp-ctl").addEventListener("click", function (e) {
 				var b = e.target.closest("[data-a]");
 				if (!b || App.editing) return;
@@ -308,12 +312,12 @@ var Round6 = (function () {
 				}
 				var p = s.player;
 				ctx.node.classList.toggle("sp-idle", !p || !p.title);
-				if (s.starting) { shownImg = null; art.style.backgroundImage = ""; setHtml(queue, ""); ctx.node.classList.add("sp-idle"); setText(t, "Starting Spotify…"); setText(a, "Your music starts in a moment"); setText(dv, ""); setHtml(play, svg("play")); return; }
+				if (s.starting) { shownImg = null; art.style.backgroundImage = spBg.style.backgroundImage = ""; ctx.node.classList.remove("sp-has-art"); setHtml(queue, ""); ctx.node.classList.add("sp-idle"); setText(t, "Starting Spotify…"); setText(a, "Your music starts in a moment"); setText(dv, ""); setHtml(play, svg("play")); return; }
 				if (!p || !p.title) { setText(t, "Nothing playing"); setText(a, s.error || "Tap play to start Spotify"); setText(dv, ""); setHtml(play, svg("play")); return; }
 				setText(t, p.title);
 				setText(a, p.artist);
 				setText(dv, p.device ? "on " + p.device : "");
-				if (p.image !== shownImg) { shownImg = p.image; art.style.backgroundImage = p.image ? 'url("' + p.image.replace(/"/g, "") + '")' : ""; }
+				if (p.image !== shownImg) { shownImg = p.image; art.style.backgroundImage = spBg.style.backgroundImage = p.image ? 'url("' + p.image.replace(/"/g, "") + '")' : ""; ctx.node.classList.toggle("sp-has-art", !!p.image); }
 				prog.style.width = p.duration ? Math.min(100, (p.progress / p.duration) * 100) + "%" : "0%";
 				setHtml(play, svg(p.playing ? "pause" : "play"));
 				q('[data-a="shuffle"]').classList.toggle("on", !!p.shuffle);
@@ -322,7 +326,7 @@ var Round6 = (function () {
 				like.classList.toggle("on", !!p.liked);
 				if (ctx.h >= 3 || (ctx.h >= 2 && ctx.w >= 4)) {
 					var qu = quP.get();
-					setHtml(queue, qu && qu.queue && qu.queue.length ? "<h5>Up next</h5>" + qu.queue.slice(0, ctx.h >= 3 ? 6 : 3).map(function (x) { return "<div><b>" + esc(x.title) + "</b> · " + esc(x.artist) + "</div>"; }).join("") : "");
+					setHtml(queue, qu && qu.queue && qu.queue.length ? "<h5>Up next</h5>" + qu.queue.slice(0, ctx.h >= 4 ? 8 : ctx.h >= 3 ? 6 : 3).map(function (x) { return "<div><b>" + esc(x.title) + "</b> · " + esc(x.artist) + "</div>"; }).join("") : "");
 				}
 			};
 		},

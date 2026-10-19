@@ -9,7 +9,10 @@ var Look = (function () {
 		var b = document.body;
 		b.classList.toggle("glass", Cfg.tileStyle === "glass");
 		// The new look, unless you picked Classic look (Edit → Pages → Look).
-		b.classList.toggle("fresh", !(typeof Editor !== "undefined" && Editor.storeGet("cpLook") === "classic"));
+		var lk = typeof Editor !== "undefined" ? Editor.storeGet("cpLook") : "";
+		b.classList.toggle("fresh", lk !== "classic");
+		// Studio: the newest look (black-friendly tiles, big covers, thick sliders). The default.
+		b.classList.toggle("studio", !lk || lk === "studio");
 		var g = U.clamp(Cfg.glassStrength, 0, 100) / 100;
 		var r = document.documentElement.style;
 		r.setProperty("--glass-a", (0.82 - g * 0.6).toFixed(2));
@@ -27,7 +30,8 @@ var Look = (function () {
 	function setBaseAccent(rgb) { baseRgb = rgb; applyAccent(); }
 
 	function applyAccent() {
-		var a = Cfg.coverAccent && coverRgb ? coverRgb : baseRgb || U.hexToRgb(Cfg.accent, [43, 179, 163]);
+		var own = document.body.classList.contains("studio") && typeof Editor !== "undefined" && Editor.storeGet("cpAccent");
+		var a = Cfg.coverAccent && coverRgb ? coverRgb : own ? U.hexToRgb(own, [43, 179, 163]) : baseRgb || U.hexToRgb(Cfg.accent, [43, 179, 163]);
 		var r = document.documentElement.style;
 		r.setProperty("--accent", "rgb(" + a.join(",") + ")");
 		r.setProperty("--accent-rgb", a.join(","));

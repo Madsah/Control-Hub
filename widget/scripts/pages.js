@@ -725,10 +725,10 @@ var Pages = (function () {
 	function lookSettings(wrap) {
 		var sec = el("div", "opt");
 		sec.appendChild(el("h4", "", "Look"));
-		var classic = Editor.storeGet("cpLook") === "classic";
+		var cur = Editor.storeGet("cpLook") || "studio";
 		var ch = el("div", "chips");
-		[["new", "New look"], ["classic", "Classic look"]].forEach(function (o) {
-			var on = (o[0] === "classic") === classic;
+		[["studio", "Studio"], ["new", "Soft"], ["classic", "Classic"]].forEach(function (o) {
+			var on = o[0] === cur;
 			var c = el("button", "chip" + (on ? " on" : ""), esc(o[1]));
 			c.addEventListener("click", function () {
 				Editor.storeSet("cpLook", o[0]);
@@ -738,7 +738,7 @@ var Pages = (function () {
 			ch.appendChild(c);
 		});
 		sec.appendChild(ch);
-		sec.appendChild(el("p", "hint", "New look: softer light and shadows, smoother pages and windows, tiles that sink a little when you tap them. Classic look: exactly like before. Your tiles and pages stay the same either way."));
+		sec.appendChild(el("p", "hint", "Studio: the newest look, with big album covers, thick sliders and true black on the Midnight theme. Soft: softer light and shadows. Classic: exactly like the very first panel. Your tiles and pages stay the same either way."));
 		wrap.appendChild(sec);
 	}
 

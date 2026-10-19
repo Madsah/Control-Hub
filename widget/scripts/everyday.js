@@ -94,7 +94,9 @@ var Everyday = (function () {
 			ctx.body.innerHTML = '<div class="wx-now"><span class="wx-ic"></span><div class="wx-tx"><b class="wx-t"></b><span class="wx-s"></span></div></div><div class="wx-days"></div>';
 			var ic = ctx.body.querySelector(".wx-ic"), tEl = ctx.body.querySelector(".wx-t"), sEl = ctx.body.querySelector(".wx-s"), days = ctx.body.querySelector(".wx-days");
 			var url = "https://api.open-meteo.com/v1/forecast?latitude=" + (+cfg.lat).toFixed(3) + "&longitude=" + (+cfg.lon).toFixed(3) +
-				"&current=temperature_2m,weather_code,is_day,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&wind_speed_unit=ms&timezone=auto&forecast_days=6";
+				"&current=temperature_2m,weather_code,is_day,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&wind_speed_unit=ms&timezone=auto&forecast_days=6" +
+				(cfg.fc === "hours" ? "&hourly=temperature_2m,weather_code,precipitation_probability,is_day&forecast_hours=12" : "");
+			ctx.node.classList.toggle("wx-hours", cfg.fc === "hours");
 			return function () {
 				var c = cached("wx:" + url, 15 * 60000, function () { return getText(url).then(JSON.parse); });
 				var d = c.data;
@@ -110,8 +112,19 @@ var Everyday = (function () {
 				var today = d.daily ? Math.round(d.daily.temperature_2m_max[0]) + "° / " + Math.round(d.daily.temperature_2m_min[0]) + "°" : "";
 				setText(sEl, ctx.w === 1 ? (cfg.name || "") : (cfg.name || "") + " · " + w.text + (ctx.h > 1 || ctx.w > 2 ? "" : " · " + today));
 				var n = ctx.w >= 3 ? Math.min(5, ctx.w + 1) : ctx.h > 1 ? 3 : 0;
-				var html = "";
-				for (var i = 0; d.daily && i < n; i++) {
+				var html = "", hoursDone = false;
+				if (cfg.fc === "hours" && d.hourly && d.hourly.time) {
+					// The next hours instead of the next days.
+					var hn = ctx.w >= 4 ? 6 : n;
+					for (var k = 0; k < hn && k < d.hourly.time.length; k++) {
+						var hw = wmo(d.hourly.weather_code[k], d.hourly.is_day ? !d.hourly.is_day[k] : false);
+						var hr = d.hourly.precipitation_probability ? d.hourly.precipitation_probability[k] : null;
+						html += '<div class="wx-day"><span>' + (k === 0 ? "Now" : d.hourly.time[k].slice(11, 13)) + "</span>" + svg(hw.icon) + "<b>" + Math.round(d.hourly.temperature_2m[k]) + "°</b><em>" + (hr != null && hr >= 30 ? hr + "%" : "&nbsp;") + "</em></div>";
+					}
+					n = hn;
+					hoursDone = !!html;
+				}
+				for (var i = 0; !hoursDone && d.daily && i < n; i++) {
 					var dw = wmo(d.daily.weather_code[i]);
 					var lab = i === 0 ? "Today" : new Date(d.daily.time[i] + "T12:00").toLocaleDateString("en-GB", { weekday: "short" });
 					var rain = d.daily.precipitation_probability_max ? d.daily.precipitation_probability_max[i] : null;
@@ -126,8 +139,16 @@ var Everyday = (function () {
 	function pickCity(t, back) {
 		var wrap = el("div", "opts");
 		Editor.modal("Weather: choose your city", wrap, back);
-		wrap.innerHTML = '<div class="pick-bar"><input class="search" placeholder="Type a city, e.g. Aarhus" /><button class="pill accent">Search</button></div><div class="opt-list"></div>';
+		var fc = (t.cfg && t.cfg.fc) || "days";
+		wrap.innerHTML = '<div class="chips wx-fc"><button class="chip' + (fc === "days" ? " on" : "") + '" data-fc="days">Next days</button><button class="chip' + (fc === "hours" ? " on" : "") + '" data-fc="hours">Next hours</button></div><div class="pick-bar"><input class="search" placeholder="Type a city, e.g. Aarhus" /><button class="pill accent">Search</button></div><div class="opt-list"></div>';
 		var input = wrap.querySelector("input"), list = wrap.querySelector(".opt-list");
+		wrap.querySelector(".wx-fc").addEventListener("click", function (e) {
+			var b = e.target.closest("[data-fc]");
+			if (!b) return;
+			t.cfg = t.cfg || {};
+			t.cfg.fc = b.dataset.fc;
+			Editor.saveTile(t, function () { pickCity(t, back); });
+		});
 		input.value = (t.cfg && t.cfg.name) || "";
 		function search() {
 			var q = input.value.trim();
@@ -140,7 +161,7 @@ var Everyday = (function () {
 					b.querySelector("b").textContent = p.name;
 					b.querySelector("em").textContent = [p.admin1, p.country].filter(Boolean).join(", ");
 					b.addEventListener("click", function () {
-						t.cfg = { name: p.name, lat: p.latitude, lon: p.longitude };
+						t.cfg = { name: p.name, lat: p.latitude, lon: p.longitude, fc: (t.cfg && t.cfg.fc) || undefined };
 						Editor.saveTile(t, back);
 					});
 					list.appendChild(b);

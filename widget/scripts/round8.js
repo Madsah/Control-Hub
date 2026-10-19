@@ -533,8 +533,9 @@ var Round8 = (function () {
 		}
 		function sec(title, hint) { var s = el("div", "opt"); s.appendChild(el("h4", "", esc(title))); if (hint) s.appendChild(el("p", "hint", esc(hint))); wrap.appendChild(s); return s; }
 
-		var s0 = sec("Style", "New look: soft light and shadows. Classic: exactly like before Round 7.");
-		chooser(s0, [["new", "New look"], ["classic", "Classic look"]], Editor.storeGet("cpLook") === "classic" ? "classic" : "new", function (v) { Editor.storeSet("cpLook", v); Look.apply(); again(); });
+		var s0 = sec("Style", "Studio: the newest look, with big album covers, thick sliders and true black on the Midnight theme. Soft: the look from before. Classic: exactly like the very first panel.");
+		chooser(s0, [["studio", "Studio"], ["new", "Soft"], ["classic", "Classic"]], Editor.storeGet("cpLook") || "studio", function (v) { Editor.storeSet("cpLook", v); Look.apply(); again(); });
+		if (window.Studio) Studio.lookSection(sec, chooser, again);
 
 		var s1 = sec("Theme", "For every page. A page can have its own theme in its ✏ (Pages).");
 		chooser(s1, [["", "Like the iCUE setting"]].concat(THEMES.slice(1)), o.theme || "", function (v) { setOpt("theme", v); again(); });
