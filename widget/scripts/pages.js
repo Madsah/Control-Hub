@@ -296,7 +296,7 @@ var Pages = (function () {
 		if (window.Round9) Round9.presets().forEach(function (t) { ready.push({ group: "Start here", t: t }); });
 		if (window.Round8b) Round8b.builtinTemplates().forEach(function (t) { ready.push({ group: "Music", t: t }); });
 		if (window.Round10) Round10.presets().forEach(function (t) { ready.push({ group: t.group, t: t }); });
-		var order = ["Start here", "My Home", "Flight sim", "Games", "Music", "Everyday", "PC"];
+		var order = ["Start here", "Black", "My Home", "Flight sim", "Games", "Music", "Everyday", "PC"];
 		order.forEach(function (g) {
 			var items = ready.filter(function (r) { return r.group === g; });
 			if (!items.length) return;

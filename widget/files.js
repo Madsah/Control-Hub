@@ -2,7 +2,7 @@
    When the panel loads from Control Hub, Control Hub's own copy of this list is used, so new files arrive with updates.
    "version" must be the same as manifest.json's version. */
 CP_FILES = {
-	version: "5.4.1",
+	version: "5.4.2",
 	styles: [
 		"styles/panel.css",
 		"styles/fresh.css",
