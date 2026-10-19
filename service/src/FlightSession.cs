@@ -382,7 +382,7 @@ namespace ControlPanelHelper
         static string pendingPage;
         static DateTime pendingAt;
 
-        static void RequestPage(string id)
+        public static void RequestPage(string id)
         {
             lock (Gate) { pendingPage = id; pendingAt = DateTime.UtcNow; }
             Events.Bump();

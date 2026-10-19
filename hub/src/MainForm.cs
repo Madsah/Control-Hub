@@ -78,6 +78,27 @@ namespace ControlHub
         bool backupBusy;
         // Help
         TextBox logBox;
+        // Overview cards (1.11)
+        Label greet, greetSub;
+        StatusCard dStatus;
+        TextCard dUpdate;
+        FlatButton dUpdateBtn, dPanelShow, dPlay;
+        PanelCard dPanel;
+        MusicCard dMusic;
+        FlightCard dFlight;
+        QuickCard dQuick;
+        QuickTile qService;
+        List<Dictionary<string, object>> panelPages = new List<Dictionary<string, object>>();
+        int panelShown = -1, panelLive = -1;
+        DateTime panelBrowsed = DateTime.MinValue, layoutAt = DateTime.MinValue, bookAt = DateTime.MinValue;
+        string coverUrl;
+        bool spPlaying;
+        // Settings (1.11)
+        Toggle autostart2;
+        AccentPicker accentPick;
+        string accentChoice = "panel", panelAccent;
+        readonly Dictionary<string, Row> connRows = new Dictionary<string, Row>();
+        static readonly System.Globalization.CultureInfo En = new System.Globalization.CultureInfo("en-GB");
 
         public MainForm()
         {
@@ -88,7 +109,7 @@ namespace ControlHub
             ForeColor = T.Text;
             Font = T.Body;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(T.Px(1080), T.Px(720));
+            ClientSize = new Size(T.Px(1180), T.Px(780));
             MinimumSize = new Size(T.Px(900), T.Px(600));
             DoubleBuffered = true;
             HandleCreated += delegate { DarkTitle.Apply(this); };
@@ -108,7 +129,13 @@ namespace ControlHub
             }
             var help = AddNav(Glyph.Help, "Help", 0);
             help.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
-            nav.Resize += delegate { help.Top = nav.ClientSize.Height - help.Height - T.Px(12); };
+            var settingsNav = AddNav(Glyph.Settings, "Settings", 0);
+            settingsNav.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
+            nav.Resize += delegate
+            {
+                help.Top = nav.ClientSize.Height - help.Height - T.Px(12);
+                settingsNav.Top = help.Top - settingsNav.Height - T.Px(4);
+            };
 
             content = new Panel { Dock = DockStyle.Fill, BackColor = T.Win };
             Controls.Add(content);
@@ -122,6 +149,7 @@ namespace ControlHub
             pages["Updates"] = BuildUpdates(); HubApp.Step("Updates built");
             pages["Backup"] = BuildBackup(); HubApp.Step("Backup built");
             pages["Help"] = BuildHelp(); HubApp.Step("Help built");
+            pages["Settings"] = BuildSettings(); HubApp.Step("Settings built");
             foreach (var p in pages.Values) { p.Dock = DockStyle.Fill; p.Visible = false; content.Controls.Add(p); }
             ShowPage("Overview");
             HubApp.Step("Pages shown");
@@ -129,7 +157,17 @@ namespace ControlHub
             timer = new System.Windows.Forms.Timer { Interval = 3000 };
             timer.Tick += delegate { Poll(); };
             timer.Start();
-            Shown += delegate { HubApp.Started = true; HubApp.Step("Window open"); help.Top = nav.ClientSize.Height - help.Height - T.Px(12); Poll(); CheckUpdates(true); LoadLayouts(); };
+            Shown += delegate
+            {
+                HubApp.Started = true;
+                HubApp.Step("Window open");
+                help.Top = nav.ClientSize.Height - help.Height - T.Px(12);
+                settingsNav.Top = help.Top - settingsNav.Height - T.Px(4);
+                Poll(); CheckUpdates(true); LoadLayouts(); LoadLogos();
+            };
+            LoadLook();
+            RestoreWindow();
+            FormClosing += delegate { SaveWindow(); };
             Activated += delegate { Poll(); };
         }
 
@@ -164,31 +202,108 @@ namespace ControlHub
         Stack BuildOverview()
         {
             var s = new Stack();
-            s.Heading("Overview", "Everything Control Hub looks after on this PC.");
-            lamps = s.Put(new LampStrip());
+            greet = s.Heading(Greeting(), DateTime.Now.ToString("dddd d MMMM", En));
+            greetSub = s.Controls[s.Controls.Count - 1] as Label;
+
+            // The older parts (lamps and rows) still keep their state; they're just not shown on the Overview any more.
+            lamps = new LampStrip();
             lService = lamps.Add("Service");
             lPanel = lamps.Add("Panel");
             lUpdate = lamps.Add("Update");
             lSpotify = lamps.Add("Spotify");
             lDiscord = lamps.Add("Discord");
-            lamps.Margin = new Padding(0, 0, 0, T.Px(10));
-
-            ovUpdate = s.Put(new Row(Glyph.Download, "", "") { Highlight = true, Visible = false });
-            ovUpdate.Add(Btn("What's new", false, delegate { ShowPage("Updates"); }));
+            ovUpdate = new Row(Glyph.Download, "", "") { Highlight = true, Visible = false };
             ovUpdateNow = ovUpdate.Add(Btn("Update", true, delegate { DoUpdate(); }));
-
-            s.Section("Your projects");
-            ovPanel = s.Put(new Row(Glyph.Monitor, "Control Panel", "The touch panel on your XENEON EDGE"));
+            ovPanel = new Row(Glyph.Monitor, "Control Panel", "The touch panel on your XENEON EDGE");
             ovPanelPill = ovPanel.Add(new Pill());
             ovPanelButton = ovPanel.Add(Btn("Restart", false, delegate { ServiceButton(); }));
-            AddProjectRows(s, false);
+            ovBackup = new Row(Glyph.Save, "Back up everything", "");
 
-            s.Section("Quick actions");
-            ovBackup = s.Put(new Row(Glyph.Save, "Back up everything", "One file with your settings, panel layout, pictures and flight tracks"));
-            ovBackup.Add(Btn("Back up now", false, delegate { BackupNow(false); }));
-            var restore = s.Put(new Row(Glyph.Undo, "Restore a backup", "Go back to an earlier panel layout or a whole earlier set-up"));
-            restore.Add(Btn("Choose…", false, delegate { ShowPage("Backup"); }));
+            var grid = s.Put(new DashGrid());
+            dStatus = grid.Add(new StatusCard(7, 156));
+            dUpdate = grid.Add(new TextCard("Updates", 5, 156));
+            dUpdate.Set("Checking for updates…", "");
+            dUpdateBtn = dUpdate.Add(Btn("Check now", false, delegate
+            {
+                if (updInfo != null && updInfo.Error == null && updInfo.Newer) DoUpdate();
+                else CheckUpdates(false);
+            }));
+            dUpdate.Add(Btn("What's new", false, delegate { ShowPage("Updates"); }));
+
+            dPanel = grid.Add(new PanelCard(8, 262));
+            dPanel.Add(new FlatButton("", false) { IconGlyph = Glyph.Left }).Click += delegate { BrowsePanel(-1); };
+            dPanel.Add(new FlatButton("", false) { IconGlyph = Glyph.Right }).Click += delegate { BrowsePanel(1); };
+            dPanelShow = dPanel.Add(Btn("Show on panel", true, delegate { ShowOnPanel(); }));
+            dPanel.Add(Btn("Layouts", false, delegate { ShowPage("Backup"); }));
+
+            dMusic = grid.Add(new MusicCard(4, 262));
+            dMusic.Add(new FlatButton("", false) { IconGlyph = Glyph.Prev }).Click += delegate { Spotify("prev"); };
+            dPlay = dMusic.Add(new FlatButton("", true) { IconGlyph = Glyph.Play });
+            dPlay.Click += delegate { Spotify(spPlaying ? "pause" : "play"); spPlaying = !spPlaying; dPlay.IconGlyph = spPlaying ? Glyph.Pause : Glyph.Play; };
+            dMusic.Add(new FlatButton("", false) { IconGlyph = Glyph.Next }).Click += delegate { Spotify("next"); };
+
+            dFlight = grid.Add(new FlightCard(5, 196));
+            dFlight.Add(Btn("Open FlightLine", true, delegate { OpenFlightLine(); }));
+            dFlight.Add(Btn("Start session", false, delegate { ThreadPool.QueueUserWorkItem(delegate { HubApi.Run("flightSessionStart"); }); }));
+
+            dQuick = grid.Add(new QuickCard(7, 196));
+            dQuick.AddTile(Glyph.Save, "Back up now", delegate { BackupNow(false); });
+            dQuick.AddTile(Glyph.Sync, "Check for updates", delegate { CheckUpdates(false); ShowPage("Updates"); });
+            qService = dQuick.AddTile(Glyph.Refresh, "Restart service", delegate { ServiceButton(); });
+            dQuick.AddTile(Glyph.Folder, "Settings folder", delegate { HubApp.Open(BackupFile.DataFolder); });
             return s;
+        }
+
+        static string Greeting()
+        {
+            int h = DateTime.Now.Hour;
+            string hi = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+            string n = Environment.UserName ?? "";
+            int cut = n.IndexOfAny(new[] { '.', ' ', '_' });
+            if (cut > 0) n = n.Substring(0, cut);
+            bool ok = n.Length >= 2 && n.Length <= 14;
+            foreach (char c in n) if (!char.IsLetter(c)) ok = false;
+            return ok ? hi + ", " + char.ToUpper(n[0]) + n.Substring(1) : hi;
+        }
+
+        void OpenFlightLine()
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                if (!HubApp.OpenFlightLine())
+                    try { BeginInvoke((MethodInvoker)delegate { Dlg.Info(this, "FlightLine couldn't open", "Control Hub Service isn't answering. Restart it on the Overview, then try again."); }); } catch { }
+            });
+        }
+
+        void Spotify(string what)
+        {
+            var b = new Dictionary<string, object>();
+            b["action"] = "spotify";
+            b["what"] = what;
+            ThreadPool.QueueUserWorkItem(delegate { HubApi.Action(b); try { BeginInvoke((MethodInvoker)delegate { RefreshSoon(); }); } catch { } });
+        }
+
+        void BrowsePanel(int step)
+        {
+            if (panelPages.Count == 0) return;
+            int i = panelShown < 0 ? 0 : panelShown;
+            panelShown = ((i + step) % panelPages.Count + panelPages.Count) % panelPages.Count;
+            panelBrowsed = DateTime.Now;
+            DrawPanelPage();
+        }
+
+        void ShowOnPanel()
+        {
+            if (panelShown < 0 || panelShown >= panelPages.Count) return;
+            var p = panelPages[panelShown];
+            var b = new Dictionary<string, object>();
+            b["what"] = "showPanelPage";
+            b["page"] = HubApi.Str(p, "id") ?? HubApi.Str(p, "name");
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                bool ok = HubApi.Do(b);
+                try { BeginInvoke((MethodInvoker)delegate { if (!ok) NotRunning(); else { panelLive = panelShown; DrawPanelPage(); RefreshSoon(); } }); } catch { }
+            });
         }
 
         void ServiceButton()
@@ -205,6 +320,7 @@ namespace ControlHub
             var s = new Stack();
             s.Heading("Projects", "What Control Hub looks after, and where it lives on this PC.");
             prPanel = s.Put(new Row(Glyph.Monitor, "Control Panel", ""));
+            prPanel.IconBack = T.Mix(T.Raise, T.Acc, 0.5f);
             prPill = prPanel.Add(new Pill());
             prStart = prPanel.Add(Btn("Restart service", false, delegate { ServiceButton(); }));
             prPanel.Add(Btn("Program folder", false, delegate { HubApp.Open(HubApp.Folder); }));
@@ -225,6 +341,8 @@ namespace ControlHub
         {
             // FlightLine: part of Control Hub (its flights are recorded by Control Hub Service).
             var fl = s.Put(new Row(Glyph.Airplane, "FlightLine", "Your flight logbook, and Start session for your flight programs"));
+            fl.IconImage = FlightLineLogo();
+            fl.IconBack = Color.FromArgb(37, 99, 235);
             fl.Add(Btn("Open", true, delegate
             {
                 ThreadPool.QueueUserWorkItem(delegate
@@ -301,6 +419,22 @@ namespace ControlHub
             new[] { "simconnect", Glyph.Airplane, "MSFS SimConnect", "Flight data from MSFS 2024: pick SimConnect.dll from the MSFS SDK once", "simconnect", "Find SimConnect.dll…", "" },
         };
 
+        /// <summary>Each service's own colour, behind its icon until the real logo has loaded.</summary>
+        static Color Brand(string key)
+        {
+            switch (key)
+            {
+                case "spotify": return Color.FromArgb(30, 185, 84);
+                case "discord": return Color.FromArgb(88, 101, 242);
+                case "twitch": return Color.FromArgb(145, 70, 255);
+                case "steam": return Color.FromArgb(27, 40, 56);
+                case "sayintentions": return Color.FromArgb(14, 116, 144);
+                case "cs2": return Color.FromArgb(217, 119, 6);
+                case "simconnect": return Color.FromArgb(37, 99, 235);
+                default: return Color.Empty;
+            }
+        }
+
         Stack BuildConnections()
         {
             var s = new Stack();
@@ -309,6 +443,8 @@ namespace ControlHub
             {
                 var conn = c;
                 var row = s.Put(new Row(conn[1], conn[2], conn[3]));
+                row.IconBack = Brand(conn[0]);
+                connRows[conn[0]] = row;
                 connPills[conn[0]] = row.Add(new Pill());
                 row.Add(Btn(conn[5], conn[0] != "simconnect" && conn[0] != "cs2", delegate
                 {
@@ -426,6 +562,15 @@ namespace ControlHub
             navItems["Updates"].Invalidate();
             if (info.Error != null) lUpdate.Set("Couldn't check", Color.Empty);
             else lUpdate.Set(ready ? info.Version + " ready" : "Up to date", ready ? T.Warn : T.Ok);
+            // the Updates card on the Overview
+            if (info.Error != null) dUpdate.Set("Couldn't check for updates", info.Error);
+            else if (ready) dUpdate.Set("Version " + info.Version + " is ready", info.Notes.Count > 0 ? info.Notes[0] : "You have " + mine + ".");
+            else dUpdate.Set("You're up to date", "Control Hub " + mine + "  ·  checked " + DateTime.Now.ToString("HH:mm"));
+            dUpdate.Glow = ready ? T.Acc : Color.Empty;
+            dUpdateBtn.Text = ready ? "Update now" : "Check now";
+            dUpdateBtn.Accent = ready;
+            dUpdate.PerformLayout();
+            dUpdate.Invalidate();
             foreach (var p in pages.Values) p.PerformLayout();
         }
 
@@ -780,11 +925,40 @@ namespace ControlHub
             if (polling || !Visible || WindowState == FormWindowState.Minimized) return;
             if ((DateTime.Now - updChecked).TotalMinutes > 60) CheckUpdates(true);
             polling = true;
+            bool dash = current == "Overview";
+            bool wantLayout = dash && (DateTime.Now - layoutAt).TotalSeconds > 20;
+            bool wantBook = dash && (DateTime.Now - bookAt).TotalSeconds > 60;
+            string haveCover = coverUrl;
             ThreadPool.QueueUserWorkItem(delegate
             {
                 var d = HubApi.Get("/api/hub/status", 2500);
-                if (IsDisposed) return;
-                try { BeginInvoke((MethodInvoker)delegate { polling = false; Apply(d); }); }
+                Dictionary<string, object> sp = null, lay = null, book = null;
+                Image cover = null;
+                string newCover = haveCover;
+                if (d != null && dash)
+                {
+                    // The Overview's cards: what plays, the panel's layout, the last flight.
+                    sp = HubApi.Get("/api/spotify", 2500);
+                    var pl = HubApi.Obj(sp, "player");
+                    string img = HubApi.Str(pl, "image");
+                    if (img != haveCover)
+                    {
+                        newCover = img;
+                        if (!string.IsNullOrEmpty(img) && img.StartsWith("https://")) cover = Pics.Load(img, 6000);
+                    }
+                    if (wantLayout) lay = HubApi.Get("/api/hub/panel", 3000);
+                    if (wantBook) book = HubApi.Get("/api/fl/logbook", 5000);
+                }
+                if (IsDisposed) { if (cover != null) cover.Dispose(); return; }
+                try
+                {
+                    BeginInvoke((MethodInvoker)delegate
+                    {
+                        polling = false;
+                        Apply(d);
+                        if (dash) ApplyDash(d, sp, lay, book, newCover, cover);
+                    });
+                }
                 catch { polling = false; }
             });
         }
@@ -846,6 +1020,7 @@ namespace ControlHub
 
             settingToggles = true;
             autostart.On = HubApi.Bool(d, "autostart");
+            if (autostart2 != null) autostart2.On = autostart.On;
             var bk = HubApi.Obj(d, "backup");
             if (bk != null)
             {
@@ -858,6 +1033,362 @@ namespace ControlHub
             settingToggles = false;
             foreach (var r in new Control[] { ovPanel, prPanel, bkAuto }) r.Invalidate();
             foreach (var p in pages.Values) p.PerformLayout();
+        }
+
+        // ================================================================== Settings
+
+        Stack BuildSettings()
+        {
+            var s = new Stack();
+            s.Heading("Settings", "How Control Hub looks and starts.");
+
+            var look = s.Put(new Row(Glyph.Palette, "Accent colour", "P follows your panel's accent colour (Edit → Look on the panel). Or pick one for this window."));
+            look.IconBack = T.Mix(T.Raise, T.Acc, 0.5f);
+            accentPick = new AccentPicker { Value = accentChoice };
+            accentPick.Changed += delegate
+            {
+                accentChoice = accentPick.Value;
+                try { Directory.CreateDirectory(BackupFile.DataFolder); File.WriteAllText(LookFile, accentChoice); } catch { }
+                ApplyAccent();
+                look.IconBack = T.Mix(T.Raise, T.Acc, 0.5f);
+                Invalidate(true);
+            };
+            look.SetBody(accentPick, T.Px(40));
+
+            var start = s.Put(new Row(Glyph.Power, "Start with Windows", "Control Hub Service starts when you sign in. The panel needs it."));
+            autostart2 = start.Add(new Toggle());
+            autostart2.Changed += delegate
+            {
+                if (settingToggles) return;
+                if (!HubApi.Run(autostart2.On ? "autostartOn" : "autostartOff")) NotRunning();
+                RefreshSoon();
+            };
+
+            var win = s.Put(new Row(Glyph.Window, "Window", "Control Hub remembers its size and place on the screen."));
+            win.Add(Btn("Reset size", false, delegate
+            {
+                WindowState = FormWindowState.Normal;
+                ClientSize = new Size(T.Px(1180), T.Px(780));
+                CenterToScreen();
+            }));
+
+            s.Section("Folders");
+            var f1 = s.Put(new Row(Glyph.Folder, "Your settings", BackupFile.DataFolder));
+            f1.Add(Btn("Open", false, delegate { HubApp.Open(BackupFile.DataFolder); }));
+            var f2 = s.Put(new Row(Glyph.Folder, "Program", HubApp.Folder));
+            f2.Add(Btn("Open", false, delegate { HubApp.Open(HubApp.Folder); }));
+
+            s.Section("About");
+            var about = s.Put(new Row(Glyph.Info, "Control Hub " + Updater.Installed(), "Your panel, FlightLine and the rest, in one place."));
+            about.Add(Btn("Updates", false, delegate { ShowPage("Updates"); }));
+            about.Add(Btn("Help", false, delegate { ShowPage("Help"); }));
+            return s;
+        }
+
+        // ================================================================== Overview cards
+
+        void ApplyDash(Dictionary<string, object> d, Dictionary<string, object> sp, Dictionary<string, object> lay, Dictionary<string, object> book, string newCover, Image cover)
+        {
+            greet.Text = Greeting();
+            if (greetSub != null) greetSub.Text = DateTime.Now.ToString("dddd d MMMM", En);
+
+            // ---- status
+            var chips = new List<KeyValuePair<string, Color>>();
+            if (d == null)
+            {
+                bool proc = HubApp.ServiceRunning();
+                dStatus.Set(proc ? "Control Hub Service isn't answering" : "Control Hub Service isn't running",
+                    "The panel needs it. Start it with the button under Quick actions.", T.Bad, chips);
+                qService.Text = "Start service";
+            }
+            else
+            {
+                qService.Text = "Restart service";
+                var problems = new List<string>();
+                chips.Add(new KeyValuePair<string, Color>("Service", T.Ok));
+                long secs = HubApi.Long(d, "panelSeconds");
+                bool panelOn = secs >= 0 && secs <= 30;
+                chips.Add(new KeyValuePair<string, Color>("Panel", panelOn ? T.Ok : T.Warn));
+                if (!panelOn) problems.Add(secs < 0 ? "The panel hasn't connected yet. Is iCUE running?" : "The panel was last seen " + Ago(secs) + ". Is iCUE running?");
+                var conns = HubApi.Obj(d, "connections");
+                foreach (var k in new[] { "spotify", "discord", "twitch" })
+                {
+                    var c = HubApi.Obj(conns, k);
+                    if (c == null || !HubApi.Bool(c, "configured")) continue;
+                    bool on = HubApi.Bool(c, "on");
+                    string nm = char.ToUpper(k[0]) + k.Substring(1);
+                    chips.Add(new KeyValuePair<string, Color>(nm, on ? T.Ok : T.Warn));
+                    if (!on) problems.Add(nm + " needs you to log in again (Connections).");
+                }
+                if (problems.Count == 0) dStatus.Set("Everything is running", "The service, your panel and your connections are working.", T.Ok, chips);
+                else dStatus.Set(problems.Count == 1 ? "One thing needs a look" : problems.Count + " things need a look", string.Join(" ", problems.ToArray()), T.Warn, chips);
+
+                // the panel's accent colour and the page it shows
+                panelAccent = HubApi.Str(d, "panelAccent");
+                ApplyAccent();
+                object pg;
+                int live = d.TryGetValue("panelPage", out pg) && pg != null ? (int)HubApi.Long(d, "panelPage") : -1;
+                if (live != panelLive)
+                {
+                    panelLive = live;
+                    if ((DateTime.Now - panelBrowsed).TotalSeconds > 30) panelShown = live;
+                    DrawPanelPage();
+                }
+            }
+
+            // ---- the panel's layout
+            if (lay != null)
+            {
+                layoutAt = DateTime.Now;
+                var l = HubApi.Parse(HubApi.Str(lay, "layout") ?? "");
+                panelPages = HubApi.List(l, "pages");
+                if (panelLive < 0 && l != null) panelLive = (int)HubApi.Long(l, "current");
+                if (panelShown < 0 || panelShown >= panelPages.Count) panelShown = Math.Max(0, Math.Min(panelPages.Count - 1, panelLive));
+                DrawPanelPage();
+            }
+
+            // ---- now playing
+            if (newCover != coverUrl)
+            {
+                coverUrl = newCover;
+                dMusic.SetCover(cover);
+            }
+            else if (cover != null) cover.Dispose();
+            var player = HubApi.Obj(sp, "player");
+            bool spOn = sp != null && HubApi.Bool(sp, "connected");
+            if (!spOn)
+            {
+                dMusic.Song = sp == null ? "Spotify" : "Spotify isn't connected";
+                dMusic.Artist = sp == null ? "" : "Connect it under Connections";
+                dMusic.Progress = 0;
+            }
+            else if (player == null || string.IsNullOrEmpty(HubApi.Str(player, "title")))
+            {
+                dMusic.Song = "Nothing playing";
+                dMusic.Artist = "Press play to start Spotify";
+                dMusic.Progress = 0;
+            }
+            else
+            {
+                dMusic.Song = HubApi.Str(player, "title");
+                dMusic.Artist = (HubApi.Str(player, "artist") ?? "") + (string.IsNullOrEmpty(HubApi.Str(player, "device")) ? "" : "  ·  " + HubApi.Str(player, "device"));
+                double dur = HubApi.Num(player, "duration");
+                dMusic.Progress = dur > 0 ? (float)(HubApi.Num(player, "progress") / dur) : 0;
+            }
+            spPlaying = player != null && HubApi.Bool(player, "playing");
+            dPlay.IconGlyph = spPlaying ? Glyph.Pause : Glyph.Play;
+            dMusic.Bar.Visible = spOn;
+            dMusic.Invalidate();
+
+            // ---- the last flight
+            if (book != null)
+            {
+                bookAt = DateTime.Now;
+                var flights = HubApi.List(book, "flights");
+                dFlight.Facts.Clear();
+                if (flights.Count == 0) { dFlight.From = ""; dFlight.To = ""; }
+                else
+                {
+                    var f = flights[0];
+                    dFlight.From = HubApi.Str(f, "from") ?? HubApi.Str(f, "planFrom") ?? "";
+                    dFlight.To = HubApi.Str(f, "to") ?? HubApi.Str(f, "planTo") ?? "";
+                    string ac = HubApi.Str(f, "aircraft") ?? "";
+                    ac = System.Text.RegularExpressions.Regex.Replace(ac, "\\s+(Asobo|Microsoft|iniBuilds|PMDG|Fenix|FBW|Headwind)\\b", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+                    if (ac.Length > 22) ac = ac.Substring(0, 21) + "…";
+                    if (ac.Length > 0) dFlight.Facts.Add(new KeyValuePair<string, string>("Plane", ac));
+                    long min = HubApi.Long(f, "blockMin");
+                    if (min > 0) dFlight.Facts.Add(new KeyValuePair<string, string>("Time", (min / 60) + " h " + (min % 60).ToString("00")));
+                    object fpm;
+                    if (f.TryGetValue("fpm", out fpm) && fpm != null) dFlight.Facts.Add(new KeyValuePair<string, string>("Landing", "−" + HubApi.Long(f, "fpm") + " fpm"));
+                    long start = HubApi.Long(f, "start");
+                    if (start > 0) dFlight.Facts.Add(new KeyValuePair<string, string>("Date", new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(start).ToLocalTime().ToString("d MMM", En)));
+                }
+                dFlight.Invalidate();
+            }
+            dStatus.Invalidate();
+        }
+
+        /// <summary>Draws one of the panel's pages on the Overview (the one on the panel, unless you browsed).</summary>
+        void DrawPanelPage()
+        {
+            dPanel.Boxes.Clear();
+            if (panelShown < 0 || panelShown >= panelPages.Count)
+            {
+                dPanel.Caption = "Your panel";
+                dPanelShow.Visible = false;
+                dPanel.Invalidate();
+                return;
+            }
+            var p = panelPages[panelShown];
+            var tiles = HubApi.List(p, "tiles");
+            var gridO = HubApi.Obj(p, "grid");
+            float cols = (float)HubApi.Num(gridO, "cols"), rows = (float)HubApi.Num(gridO, "rows");
+            float maxX = 1, maxY = 1;
+            foreach (var t in tiles)
+            {
+                var b = new PanelCard.Box
+                {
+                    X = (float)HubApi.Num(t, "x"), Y = (float)HubApi.Num(t, "y"),
+                    W = Math.Max(1f, (float)HubApi.Num(t, "w")), H = Math.Max(1f, (float)HubApi.Num(t, "h")),
+                    Type = HubApi.Str(t, "type") ?? "",
+                };
+                b.Name = TileName(b.Type, HubApi.Obj(t, "cfg"));
+                maxX = Math.Max(maxX, b.X + b.W);
+                maxY = Math.Max(maxY, b.Y + b.H);
+                dPanel.Boxes.Add(b);
+            }
+            dPanel.Cols = cols > 0 ? Math.Max(cols, maxX) : Math.Max(15, maxX);
+            dPanel.Rows = rows > 0 ? Math.Max(rows, maxY) : Math.Max(4, maxY);
+            string name = HubApi.Str(p, "name") ?? "Page " + (panelShown + 1);
+            dPanel.Caption = "Your panel  ·  " + name + (panelShown == panelLive ? "  ·  showing now" : "  ·  page " + (panelShown + 1) + " of " + panelPages.Count);
+            dPanelShow.Visible = panelShown != panelLive;
+            dPanel.PerformLayout();
+            dPanel.Invalidate();
+        }
+
+        static string TileName(string type, Dictionary<string, object> cfg)
+        {
+            string n = HubApi.Str(cfg, "name");
+            if ((type == "shortcut" || type == "folder") && !string.IsNullOrEmpty(n)) return n;
+            switch (type)
+            {
+                case "spotify": return "Spotify";
+                case "spvolume": return "Spotify volume";
+                case "spplaylists": return "Playlists";
+                case "discord": return "Discord";
+                case "clock": return "Clock";
+                case "weather": return "Weather";
+                case "speakers": return "Speakers";
+                case "mic": return "Microphone";
+                case "output": return "Output";
+                case "power": return "Power";
+                case "dnd": return "Do Not Disturb";
+                case "appsearch": return "Search";
+                case "launcher": return "Apps";
+                case "metar": return "METAR";
+                case "ofp": return "SimBrief plan";
+                case "simbrief": return "SimBrief";
+                case "dayview": return "Today";
+                case "media": return "Media";
+                case "mixer": return "Mixer";
+                case "keepawake": return "Keep awake";
+                default: return type.Length > 0 ? char.ToUpper(type[0]) + type.Substring(1) : "";
+            }
+        }
+
+        // ================================================================== accent colour
+
+        string LookFile { get { return Path.Combine(BackupFile.DataFolder, "hub-look.txt"); } }
+
+        void LoadLook()
+        {
+            try { if (File.Exists(LookFile)) accentChoice = File.ReadAllText(LookFile).Trim(); } catch { }
+            if (string.IsNullOrEmpty(accentChoice)) accentChoice = "panel";
+            if (accentPick != null) accentPick.Value = accentChoice;
+            ApplyAccent();
+        }
+
+        void ApplyAccent()
+        {
+            Color c;
+            string hex = accentChoice == "panel" ? panelAccent : accentChoice;
+            if (!T.TryHex(hex, out c)) c = Color.FromArgb(45, 212, 191);
+            if (T.SetAccent(c)) Invalidate(true);
+        }
+
+        // ================================================================== window size and place
+
+        string WindowFile { get { return Path.Combine(BackupFile.DataFolder, "hub-window.txt"); } }
+
+        void RestoreWindow()
+        {
+            try
+            {
+                if (!File.Exists(WindowFile)) return;
+                var p = File.ReadAllText(WindowFile).Trim().Split(',');
+                if (p.Length < 5) return;
+                var r = new Rectangle(int.Parse(p[0]), int.Parse(p[1]), int.Parse(p[2]), int.Parse(p[3]));
+                if (r.Width < MinimumSize.Width || r.Height < MinimumSize.Height) return;
+                bool seen = false;
+                foreach (var s in Screen.AllScreens) if (s.WorkingArea.IntersectsWith(new Rectangle(r.X + 40, r.Y + 10, Math.Max(1, r.Width - 80), 40))) seen = true;
+                if (!seen) return;
+                StartPosition = FormStartPosition.Manual;
+                Bounds = r;
+                if (p[4] == "1") WindowState = FormWindowState.Maximized;
+            }
+            catch { }
+        }
+
+        void SaveWindow()
+        {
+            try
+            {
+                var r = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+                Directory.CreateDirectory(BackupFile.DataFolder);
+                File.WriteAllText(WindowFile, r.X + "," + r.Y + "," + r.Width + "," + r.Height + "," + (WindowState == FormWindowState.Maximized ? "1" : "0"));
+            }
+            catch { }
+        }
+
+        // ================================================================== logos
+
+        /// <summary>Real app icons (from the apps on this PC, through the service) for the rows that have one.</summary>
+        void LoadLogos()
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                var apps = HubApi.List(HubApi.Get("/api/apps", 10000), "apps");
+                var want = new Dictionary<string, string[]>();
+                want["spotify"] = new[] { "Spotify" };
+                want["discord"] = new[] { "Discord" };
+                want["steam"] = new[] { "Steam" };
+                want["sayintentions"] = new[] { "SayIntentions" };
+                want["cs2"] = new[] { "Counter-Strike 2" };
+                want["simconnect"] = new[] { "Microsoft Flight Simulator 2024", "Microsoft Flight Simulator" };
+                want["panel"] = new[] { "iCUE", "CORSAIR iCUE" };
+                var got = new Dictionary<string, Image>();
+                foreach (var kv in want)
+                {
+                    foreach (var name in kv.Value)
+                    {
+                        Dictionary<string, object> hit = null;
+                        foreach (var a in apps)
+                        {
+                            string n = HubApi.Str(a, "name") ?? "";
+                            if (HubApi.Str(a, "kind") == "url" || string.IsNullOrEmpty(HubApi.Str(a, "icon"))) continue;
+                            if (string.Equals(n, name, StringComparison.OrdinalIgnoreCase) || n.StartsWith(name + " ", StringComparison.OrdinalIgnoreCase)) { hit = a; break; }
+                        }
+                        if (hit == null) continue;
+                        var img = Pics.Load("http://127.0.0.1:" + HubApi.Port + "/api/icon?id=" + Uri.EscapeDataString(HubApi.Str(hit, "icon")), 6000);
+                        if (img != null) { got[kv.Key] = img; break; }
+                    }
+                }
+                if (IsDisposed) return;
+                try
+                {
+                    BeginInvoke((MethodInvoker)delegate
+                    {
+                        foreach (var kv in got)
+                        {
+                            Row r;
+                            if (kv.Key == "panel") { if (prPanel != null) prPanel.IconImage = kv.Value; }
+                            else if (connRows.TryGetValue(kv.Key, out r)) r.IconImage = kv.Value;
+                        }
+                    });
+                }
+                catch { }
+            });
+        }
+
+        static Image FlightLineLogo()
+        {
+            try
+            {
+                string f = Path.Combine(HubApp.Folder, "FlightLine.ico");
+                if (File.Exists(f)) using (var ic = new Icon(f, 64, 64)) return ic.ToBitmap();
+            }
+            catch { }
+            return null;
         }
 
         static void LampFor(Lamp l, Dictionary<string, object> c)

@@ -1,0 +1,31 @@
+# Builds Control Hub with the same compiler the installer uses (Windows' .NET Framework 4 csc),
+# so build errors show up here before an update reaches anyone's PC.
+name: Build check
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the service and the app
+        shell: pwsh
+        run: |
+          $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          $refs = "/r:System.dll","/r:System.Core.dll","/r:System.Drawing.dll","/r:System.Windows.Forms.dll","/r:System.Web.Extensions.dll","/r:Microsoft.CSharp.dll","/r:System.Security.dll","/r:System.Xml.dll","/r:System.IO.Compression.dll","/r:System.IO.Compression.FileSystem.dll"
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          $failed = $false
+          foreach ($p in @(@{n="Control Hub Service"; m="service"}, @{n="Control Hub"; m="hub"})) {
+            $src = @(Get-ChildItem "$($p.m)\src\*.cs" | ForEach-Object FullName) + @(Get-ChildItem "shared\src\*.cs" | ForEach-Object FullName)
+            $out = & $csc /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ "/out:out\$($p.n).exe" /win32icon:shared\ControlHub.ico "/win32manifest:$($p.m)\app.manifest" "/resource:shared\ControlHub.ico,ControlHub.ico" @refs @src 2>&1
+            $code = $LASTEXITCODE
+            foreach ($line in $out) {
+              $l = "$line"
+              if ($l -match "error CS") { Write-Output "::error::$l"; $failed = $true }
+              elseif ($l -match "warning CS") { Write-Output $l }
+            }
+            if ($code -ne 0) { $failed = $true; Write-Output "::error::$($p.n) did not build (exit $code)" }
+          }
+          if ($failed) { exit 1 }
+          Write-Output "Both programs built."

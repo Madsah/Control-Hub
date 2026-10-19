@@ -373,6 +373,14 @@ namespace ControlPanelHelper
             {
                 var res = new Dictionary<string, object>();
                 if (req.Method == "GET" && req.Path == "/api/hub/status") { SendJson(stream, 200, Hub.Status(), allow); return; }
+                if (req.Method == "GET" && req.Path == "/api/hub/panel")
+                {
+                    // The panel's layout (as last saved) for the drawing on the Overview.
+                    res["ok"] = true;
+                    res["layout"] = Backups.LiveLayout() ?? "";
+                    SendJson(stream, 200, res, allow);
+                    return;
+                }
                 if (req.Method == "GET" && req.Path == "/api/hub/log")
                 {
                     res["ok"] = true;
@@ -391,6 +399,12 @@ namespace ControlPanelHelper
                     else if (what == "forget") ok = Hub.Forget(Str(body, "service"));
                     else if (what == "openFlightLine") ok = FlightLineApp.Open();
                     else if (what == "flightSessionStart") ok = FlightSession.Start();
+                    else if (what == "showPanelPage")
+                    {
+                        string pg = Str(body, "page");
+                        ok = !string.IsNullOrEmpty(pg);
+                        if (ok) FlightSession.RequestPage(pg);
+                    }
                     else if (what == "backupSettings")
                     {
                         object auto;
@@ -839,6 +853,7 @@ namespace ControlPanelHelper
                 case "power": return Power.Run(Str(b, "what"));
                 case "keepAwake": KeepAwake.Set(Bool(b, "value")); return true;
                 case "gameFocus": GameFocus.Set(Bool(b, "value")); return true;
+                case "panelLook": Hub.PanelLook(Str(b, "accent"), Int(b, "page"), Str(b, "pageName")); return true;
                 case "openFlightLine": return FlightLineApp.Open();
                 case "flightSessionStart": return FlightSession.Start();
                 case "flightSessionEnd": return FlightSession.End();

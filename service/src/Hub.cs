@@ -332,6 +332,19 @@ namespace ControlPanelHelper
             catch (Exception ex) { Log.Write("Widget file " + rel + ": " + ex.Message); return false; }
         }
 
+        // ------------------------------------------------------------------ the panel's look (accent colour and the page it shows)
+
+        static string panelAccent, panelPageName;
+        static int panelPage = -1;
+
+        public static void PanelLook(string accent, int page, string pageName)
+        {
+            if (accent != null && System.Text.RegularExpressions.Regex.IsMatch(accent, "^#[0-9a-fA-F]{6}$")) panelAccent = accent;
+            panelPage = page;
+            string n = pageName == null ? null : System.Text.RegularExpressions.Regex.Replace(pageName, "[\\x00-\\x1f]", "").Trim();
+            panelPageName = string.IsNullOrEmpty(n) ? null : n.Length > 40 ? n.Substring(0, 40) : n;
+        }
+
         // ------------------------------------------------------------------ status for the app
 
         public static Dictionary<string, object> Status()
@@ -353,6 +366,9 @@ namespace ControlPanelHelper
             d["panelRunning"] = panelRunVersion;
             d["panelSource"] = panelRunSource;
             d["panelFailed"] = panelFailed;
+            d["panelAccent"] = panelAccent;
+            d["panelPage"] = panelPage;
+            d["panelPageName"] = panelPageName;
             object wv;
             d["widgetVersion"] = WidgetVersion().TryGetValue("version", out wv) ? wv : null;
 

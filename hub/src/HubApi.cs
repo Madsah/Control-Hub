@@ -61,6 +61,34 @@ namespace ControlHub
             catch { return false; }
         }
 
+        /// <summary>Asks the service to do a panel action (/api/action), e.g. Spotify play or pause.</summary>
+        public static bool Action(Dictionary<string, object> body)
+        {
+            try
+            {
+                var req = (HttpWebRequest)WebRequest.Create(Base + "/api/action");
+                req.Method = "POST";
+                req.Timeout = 5000;
+                req.ReadWriteTimeout = 5000;
+                req.Proxy = null;
+                req.UserAgent = "ControlHub/" + HubApp.Version;
+                req.ContentType = "application/json";
+                req.Headers["X-Control-Panel"] = "1";
+                byte[] data = Encoding.UTF8.GetBytes(Json.Serialize(body));
+                req.ContentLength = data.Length;
+                using (var s = req.GetRequestStream()) s.Write(data, 0, data.Length);
+                using (var res = (HttpWebResponse)req.GetResponse()) return (int)res.StatusCode == 200;
+            }
+            catch { return false; }
+        }
+
+        public static double Num(Dictionary<string, object> d, string k)
+        {
+            object v;
+            if (d == null || !d.TryGetValue(k, out v) || v == null) return 0;
+            try { return Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture); } catch { return 0; }
+        }
+
         public static bool Run(string what)
         {
             var b = new Dictionary<string, object>();

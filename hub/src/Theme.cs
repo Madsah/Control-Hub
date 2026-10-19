@@ -12,19 +12,21 @@ namespace ControlHub
 {
     static class T
     {
-        public static readonly Color Win = Color.FromArgb(14, 20, 32);
-        public static readonly Color Nav = Color.FromArgb(11, 17, 27);
-        public static readonly Color Surf = Color.FromArgb(21, 29, 43);
-        public static readonly Color Raise = Color.FromArgb(27, 37, 54);
-        public static readonly Color RaiseHover = Color.FromArgb(36, 49, 71);
-        public static readonly Color Line = Color.FromArgb(36, 48, 68);
-        public static readonly Color ButtonLine = Color.FromArgb(44, 58, 82);
-        public static readonly Color Text = Color.FromArgb(230, 236, 245);
-        public static readonly Color Sub = Color.FromArgb(201, 211, 227);
-        public static readonly Color Mute = Color.FromArgb(140, 154, 176);
-        public static readonly Color Acc = Color.FromArgb(45, 212, 191);
-        public static readonly Color AccHover = Color.FromArgb(94, 234, 212);
-        public static readonly Color AccInk = Color.FromArgb(4, 32, 27);
+        // Dark grey (1.11): the same family as the panel's black look, a little lighter.
+        public static readonly Color Win = Color.FromArgb(26, 27, 31);
+        public static readonly Color Nav = Color.FromArgb(20, 21, 24);
+        public static readonly Color Surf = Color.FromArgb(35, 36, 41);
+        public static readonly Color Raise = Color.FromArgb(46, 48, 54);
+        public static readonly Color RaiseHover = Color.FromArgb(57, 59, 67);
+        public static readonly Color Line = Color.FromArgb(47, 49, 56);
+        public static readonly Color ButtonLine = Color.FromArgb(60, 62, 71);
+        public static readonly Color Text = Color.FromArgb(237, 238, 242);
+        public static readonly Color Sub = Color.FromArgb(205, 207, 214);
+        public static readonly Color Mute = Color.FromArgb(147, 150, 160);
+        // The accent follows the panel's accent colour (or your own pick in Settings).
+        public static Color Acc = Color.FromArgb(45, 212, 191);
+        public static Color AccHover = Color.FromArgb(94, 234, 212);
+        public static Color AccInk = Color.FromArgb(4, 32, 27);
         public static readonly Color Blue = Color.FromArgb(59, 130, 246);
         public static readonly Color Ok = Color.FromArgb(74, 222, 128);
         public static readonly Color Warn = Color.FromArgb(245, 185, 66);
@@ -54,6 +56,32 @@ namespace ControlHub
             Icon = new Font(IconFamily, 12f);
             IconSmall = new Font(IconFamily, 10f);
             Mono = new Font("Consolas", 9f);
+        }
+
+        /// <summary>Sets the accent colour (and its hover and text colours). Returns true if it changed.</summary>
+        public static bool SetAccent(Color c)
+        {
+            if (c.ToArgb() == Acc.ToArgb()) return false;
+            Acc = Color.FromArgb(255, c.R, c.G, c.B);
+            AccHover = Mix(Acc, Color.White, 0.25f);
+            double lum = 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B;
+            AccInk = lum > 140 ? Mix(Acc, Color.Black, 0.86f) : Color.White;
+            return true;
+        }
+
+        public static Color Mix(Color a, Color b, float t)
+        {
+            return Color.FromArgb(255, (int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
+        }
+
+        public static bool TryHex(string s, out Color c)
+        {
+            c = Color.Empty;
+            if (string.IsNullOrEmpty(s) || s.Length != 7 || s[0] != '#') return false;
+            int v;
+            if (!int.TryParse(s.Substring(1), System.Globalization.NumberStyles.HexNumber, null, out v)) return false;
+            c = Color.FromArgb(255, (v >> 16) & 255, (v >> 8) & 255, v & 255);
+            return true;
         }
 
         public static GraphicsPath Round(RectangleF r, float radius)
@@ -87,7 +115,8 @@ namespace ControlHub
             History = "", Folder = "", Add = "", Settings = "", Save = "", Music = "", Chat = "",
             Video = "", Game = "", People = "", Airplane = "", Mic = "", Download = "", Copy = "",
             Open = "", Shield = "", Warning = "", Check = "", Power = "", Play = "", Document = "",
-            Picture = "", Calendar = "", Globe = "", Undo = "", Lock = "", Refresh = "";
+            Picture = "", Calendar = "", Globe = "", Undo = "", Lock = "", Refresh = "",
+            Prev = "", Next = "", Pause = "", Left = "", Right = "", Palette = "", Window = "", Info = "";
     }
 
     /// <summary>Base for the hand-drawn controls: double-buffered, hover tracking, transparent to its parent.</summary>
@@ -126,7 +155,8 @@ namespace ControlHub
         }
         public void FitWidth()
         {
-            int w = TextRenderer.MeasureText(Text ?? "", Font).Width + T.Px(28) + (IconGlyph != null ? T.Px(22) : 0);
+            if (string.IsNullOrEmpty(Text) && IconGlyph != null) { Width = Height + T.Px(8); return; }   // a round icon button
+            int w = TextRenderer.MeasureText(Text ?? "", Font).Width + T.Px(34) + (IconGlyph != null ? T.Px(22) : 0);
             Width = Math.Max(T.Px(72), w);
         }
         protected override void OnTextChanged(EventArgs e) { FitWidth(); base.OnTextChanged(e); }
@@ -138,17 +168,19 @@ namespace ControlHub
             if (Down) back = ControlPaint.Dark(back, 0.05f);
             if (!Enabled) back = Color.FromArgb(120, back);
             var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
-            using (var p = T.Round(r, T.Px(5)))
+            using (var p = T.Round(r, r.Height / 2f))
             {
                 using (var b = new SolidBrush(back)) g.FillPath(b, p);
                 if (!Accent) using (var pen = new Pen(T.ButtonLine)) g.DrawPath(pen, p);
             }
             Color ink = !Enabled ? T.Mute : Accent ? T.AccInk : T.Text;
             var tr = new Rectangle(0, 0, Width, Height);
-            if (IconGlyph != null)
+            if (IconGlyph != null && string.IsNullOrEmpty(Text))
+                T.DrawText(g, IconGlyph, T.IconSmall, ink, tr, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
+            else if (IconGlyph != null)
             {
-                T.DrawText(g, IconGlyph, T.IconSmall, ink, new Rectangle(T.Px(12), 0, T.Px(18), Height), TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
-                tr = new Rectangle(T.Px(32), 0, Width - T.Px(40), Height);
+                T.DrawText(g, IconGlyph, T.IconSmall, ink, new Rectangle(T.Px(14), 0, T.Px(18), Height), TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
+                tr = new Rectangle(T.Px(35), 0, Width - T.Px(44), Height);
                 T.DrawText(g, Text, Accent ? T.BodyBold : Font, ink, tr, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
             }
             else T.DrawText(g, Text, Accent ? T.BodyBold : Font, ink, tr, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);
@@ -230,7 +262,7 @@ namespace ControlHub
             T.Smooth(g);
             var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
             bool lit = State != Color.Empty;
-            Color ink = lit ? Color.FromArgb(255, Math.Min(255, State.R + 40), Math.Min(255, State.G + 30), Math.Min(255, State.B + 40)) : Color.FromArgb(74, 88, 112);
+            Color ink = lit ? Color.FromArgb(255, Math.Min(255, State.R + 40), Math.Min(255, State.G + 30), Math.Min(255, State.B + 40)) : Color.FromArgb(92, 95, 104);
             using (var p = T.Round(r, T.Px(4)))
             {
                 if (lit)
@@ -240,13 +272,13 @@ namespace ControlHub
                 }
                 else
                 {
-                    using (var b = new SolidBrush(Color.FromArgb(15, 22, 34))) g.FillPath(b, p);
-                    using (var pen = new Pen(Color.FromArgb(24, 33, 51))) g.DrawPath(pen, p);
+                    using (var b = new SolidBrush(Color.FromArgb(30, 31, 36))) g.FillPath(b, p);
+                    using (var pen = new Pen(Color.FromArgb(42, 44, 50))) g.DrawPath(pen, p);
                 }
             }
             int half = Height / 2;
             T.DrawText(g, (LampName ?? "").ToUpperInvariant(), T.Lamp, ink, new Rectangle(0, T.Px(6), Width, half - T.Px(4)), TextFormatFlags.HorizontalCenter | TextFormatFlags.Bottom);
-            T.DrawText(g, Value, T.LampSub, lit ? Color.FromArgb(220, ink) : Color.FromArgb(74, 88, 112), new Rectangle(T.Px(4), half, Width - T.Px(8), half - T.Px(6)), TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
+            T.DrawText(g, Value, T.LampSub, lit ? Color.FromArgb(220, ink) : Color.FromArgb(92, 95, 104), new Rectangle(T.Px(4), half, Width - T.Px(8), half - T.Px(6)), TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
         }
     }
 
@@ -284,7 +316,7 @@ namespace ControlHub
             g.Clear(T.Win);
             using (var p = T.Round(new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f), T.Px(8)))
             {
-                using (var b = new SolidBrush(Color.FromArgb(7, 11, 18))) g.FillPath(b, p);
+                using (var b = new SolidBrush(Color.FromArgb(22, 23, 26))) g.FillPath(b, p);
                 using (var pen = new Pen(T.Line)) g.DrawPath(pen, p);
             }
         }
@@ -298,6 +330,10 @@ namespace ControlHub
     {
         public string IconGlyph, Title, Subtitle;
         public Color IconColor = T.Sub;
+        public Color IconBack = Color.Empty;   // a brand colour behind the icon (Empty = grey)
+        Image iconImage;
+        /// <summary>A real logo instead of the font icon (e.g. the Spotify app's own icon).</summary>
+        public Image IconImage { get { return iconImage; } set { iconImage = value; Invalidate(); } }
         public bool Highlight;           // the teal "update ready" look
         public readonly FlowLayoutPanel Side;
         public Control Body;             // e.g. a list or a text box under the title
@@ -369,7 +405,7 @@ namespace ControlHub
             T.Smooth(g);
             g.Clear(Parent != null ? Parent.BackColor : T.Win);
             var r = new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f);
-            using (var p = T.Round(r, T.Px(6)))
+            using (var p = T.Round(r, T.Px(10)))
             {
                 if (Highlight)
                     using (var b = new LinearGradientBrush(new RectangleF(0, 0, Width, Height), Color.FromArgb(32, T.Acc), Color.FromArgb(14, T.Blue), 0f)) g.FillPath(b, p);
@@ -379,9 +415,18 @@ namespace ControlHub
             if (IconGlyph != null)
             {
                 var ir = new RectangleF(T.Px(16), (baseHeight - T.Px(36)) / 2f, T.Px(36), T.Px(36));
-                using (var p = T.Round(ir, T.Px(8)))
-                using (var b = new SolidBrush(T.Raise)) g.FillPath(b, p);
-                T.DrawText(g, IconGlyph, T.Icon, IconColor, Rectangle.Round(ir), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                if (iconImage != null)
+                {
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    var im = RectangleF.Inflate(ir, -T.Px(2), -T.Px(2));
+                    g.DrawImage(iconImage, im);
+                }
+                else
+                {
+                    using (var p = T.Round(ir, T.Px(9)))
+                    using (var b = new SolidBrush(IconBack != Color.Empty ? IconBack : T.Raise)) g.FillPath(b, p);
+                    T.DrawText(g, IconGlyph, T.Icon, IconBack != Color.Empty ? Color.White : IconColor, Rectangle.Round(ir), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
             }
             int right = Side != null && Side.Visible && Side.Controls.Count > 0 ? Side.Left - T.Px(12) : Width - T.Px(16);
             int x = TextLeft, w = Math.Max(10, right - x);
@@ -413,13 +458,13 @@ namespace ControlHub
             T.Smooth(g);
             g.Clear(T.Nav);
             if (Selected || Hover)
-                using (var p = T.Round(new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f), T.Px(6)))
-                using (var b = new SolidBrush(Selected ? T.Raise : Color.FromArgb(19, 27, 41))) g.FillPath(b, p);
+                using (var p = T.Round(new RectangleF(0.5f, 0.5f, Width - 1.5f, Height - 1.5f), T.Px(8)))
+                using (var b = new SolidBrush(Selected ? T.Raise : Color.FromArgb(31, 32, 37))) g.FillPath(b, p);
             if (Selected)
                 using (var p = T.Round(new RectangleF(0, T.Px(11), T.Px(3), Height - T.Px(22)), 1f))
                 using (var b = new SolidBrush(T.Acc)) g.FillPath(b, p);
-            Color ink = Selected ? T.Text : Color.FromArgb(184, 195, 214);
-            T.DrawText(g, IconGlyph, T.Icon, ink, new Rectangle(T.Px(12), 0, T.Px(24), Height), TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
+            Color ink = Selected ? T.Text : Color.FromArgb(190, 193, 202);
+            T.DrawText(g, IconGlyph, T.Icon, Selected ? T.Acc : ink, new Rectangle(T.Px(12), 0, T.Px(24), Height), TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
             T.DrawText(g, Text, Font, ink, new Rectangle(T.Px(46), 0, Width - T.Px(80), Height), TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
             if (Badge > 0)
             {

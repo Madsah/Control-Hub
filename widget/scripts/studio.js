@@ -97,5 +97,29 @@ var Studio = (function () {
 		Round10.presets = function () { return presets().concat(old.apply(this, arguments)); };
 	}
 
+	/* ------------------------------------------------------------------ tell Control Hub the accent colour and the page showing
+	   (the Control Hub app uses the same accent, and draws the page on its Overview) */
+	var sentKey = "", sendTimer = null;
+	function tellHub() {
+		clearTimeout(sendTimer);
+		sendTimer = setTimeout(function () {
+			try {
+				if (!window.Helper || !Helper.online) return;
+				var rgb = getComputedStyle(document.documentElement).getPropertyValue("--accent-rgb").split(",").map(function (x) { return parseInt(x, 10); });
+				var hex = rgb.length === 3 && rgb.every(function (x) { return x >= 0 && x <= 255; }) ? "#" + rgb.map(function (x) { return ("0" + x.toString(16)).slice(-2); }).join("") : null;
+				var L = Editor.layout(), page = L.pages[L.current] || {};
+				var key = hex + "|" + L.current + "|" + page.name;
+				if (key === sentKey) return;
+				sentKey = key;
+				Helper.act({ action: "panelLook", accent: hex, page: L.current, pageName: page.name || "" });
+			} catch (e) {}
+		}, 800);
+	}
+	if (window.Round8 && Round8.applyLook) {
+		var oldApply = Round8.applyLook;
+		Round8.applyLook = function () { var r = oldApply.apply(this, arguments); tellHub(); return r; };
+	}
+	setInterval(function () { sentKey = ""; tellHub(); }, 60000); // again now and then (Control Hub may have restarted)
+
 	return { lookSection: lookSection, presets: presets, BLACK: BLACK };
 })();
